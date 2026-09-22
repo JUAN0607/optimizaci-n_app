@@ -8,6 +8,7 @@ import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
+import { hapticComplete } from '@/utils/haptics';
 
 export function DayAgendaList({ dateKey }: { dateKey: string }) {
   const { spacing } = useTheme();
@@ -16,7 +17,9 @@ export function DayAgendaList({ dateKey }: { dateKey: string }) {
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
   const toggleComplete = (id: string, status: string) => {
-    setActivityStatus(id, status === 'COMPLETED' ? 'PENDING' : 'COMPLETED');
+    const nextStatus = status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    setActivityStatus(id, nextStatus);
+    if (nextStatus === 'COMPLETED') hapticComplete();
     bumpDataVersion();
   };
 

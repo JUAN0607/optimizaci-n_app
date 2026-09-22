@@ -13,6 +13,7 @@ import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
+import { hapticComplete } from '@/utils/haptics';
 import { MONTH_LABELS, WEEKDAY_LABELS_LONG } from '@/constants/labels';
 import { todayKey } from '@/utils/date';
 
@@ -66,7 +67,9 @@ export default function HoyScreen() {
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
   const toggleComplete = (id: string, status: string) => {
-    setActivityStatus(id, status === 'COMPLETED' ? 'PENDING' : 'COMPLETED');
+    const nextStatus = status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    setActivityStatus(id, nextStatus);
+    if (nextStatus === 'COMPLETED') hapticComplete();
     bumpDataVersion();
   };
 

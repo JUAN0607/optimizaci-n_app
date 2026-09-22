@@ -15,6 +15,7 @@ import { useCategoryMap } from '@/hooks/useCategories';
 import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
+import { hapticComplete } from '@/utils/haptics';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,6 +49,7 @@ export default function ActivityDetailScreen() {
     setActivityStatus(activity.id, nextStatus);
     if (nextStatus === 'COMPLETED') {
       cancelEntityNotification('ACTIVITY', activity.id);
+      hapticComplete();
     }
     bumpDataVersion();
   };

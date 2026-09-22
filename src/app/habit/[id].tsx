@@ -17,6 +17,7 @@ import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import { describeRecurrence, isScheduledDay } from '@/utils/recurrence';
 import { addDaysToKey, todayKey } from '@/utils/date';
+import { hapticComplete } from '@/utils/haptics';
 
 export default function HabitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,12 +48,15 @@ export default function HabitDetailScreen() {
 
   const completeToday = () => {
     if (habit.measurementType === 'CHECKBOX') {
-      logHabit(habit.id, today, todayLog?.status === 'COMPLETED' ? 'SKIPPED' : 'COMPLETED');
+      const alreadyCompleted = todayLog?.status === 'COMPLETED';
+      logHabit(habit.id, today, alreadyCompleted ? 'SKIPPED' : 'COMPLETED');
+      if (!alreadyCompleted) hapticComplete();
     } else {
       const value = Number(pendingValue);
       if (!value) return;
       logHabit(habit.id, today, 'COMPLETED', value);
       setPendingValue('');
+      hapticComplete();
     }
     bumpDataVersion();
   };

@@ -12,6 +12,7 @@ import { useCategoryMap } from '@/hooks/useCategories';
 import { useHabits } from '@/hooks/useHabits';
 import { useTheme } from '@/theme/ThemeProvider';
 import { todayKey } from '@/utils/date';
+import { hapticComplete } from '@/utils/haptics';
 
 export default function HabitosScreen() {
   const { colors, spacing, type } = useTheme();
@@ -35,6 +36,7 @@ export default function HabitosScreen() {
 
   const toggleComplete = (habitId: string, alreadyCompleted: boolean) => {
     logHabit(habitId, today, alreadyCompleted ? 'SKIPPED' : 'COMPLETED');
+    if (!alreadyCompleted) hapticComplete();
     bumpDataVersion();
   };
 
