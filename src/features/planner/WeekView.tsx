@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
 import { useActivitiesInRange } from '@/hooks/useActivities';
+import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import { addDaysToKey, parseDateKey, todayKey } from '@/utils/date';
 import { startOfWeekKey } from '@/utils/recurrence';
 
-import { DayAgendaList } from './DayAgendaList';
+import { TimeGrid } from './TimeGrid';
+
+const HOUR_HEIGHT = 44;
 
 interface WeekViewProps {
   dateKey: string;
@@ -17,20 +21,22 @@ interface WeekViewProps {
 
 export function WeekView({ dateKey, onChangeDate }: WeekViewProps) {
   const { colors, radius, spacing, type } = useTheme();
+  const categoryMap = useCategoryMap();
   const weekStart = startOfWeekKey(dateKey);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysToKey(weekStart, i)), [weekStart]);
   const activities = useActivitiesInRange(days[0], days[6]);
   const today = todayKey();
 
-  const countByDay = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const a of activities) map.set(a.date, (map.get(a.date) ?? 0) + 1);
-    return map;
-  }, [activities]);
+  const columns = useMemo(
+    () => days.map((day) => ({ dateKey: day, activities: activities.filter((a) => a.date === day) })),
+    [days, activities],
+  );
 
   const weekEndDate = parseDateKey(days[6]);
   const weekStartDate = parseDateKey(days[0]);
   const label = `${weekStartDate.getDate()} — ${weekEndDate.getDate()} ${weekEndDate.toLocaleDateString('es-CO', { month: 'short' })}`;
+
+  const initialOffset = Math.max(0, (new Date().getHours() - 2) * HOUR_HEIGHT);
 
   return (
     <View style={{ flex: 1 }}>
@@ -44,12 +50,11 @@ export function WeekView({ dateKey, onChangeDate }: WeekViewProps) {
         </Pressable>
       </View>
 
-      <View style={[styles.strip, { paddingHorizontal: spacing.lg }]}>
+      <View style={[styles.strip, { paddingLeft: 56 + spacing.md, paddingRight: spacing.md }]}>
         {days.map((day) => {
           const d = parseDateKey(day);
           const isSelected = day === dateKey;
           const isToday = day === today;
-          const count = countByDay.get(day) ?? 0;
           return (
             <Pressable key={day} onPress={() => onChangeDate(day)} style={styles.dayCell}>
               <Text style={[type.caption, { color: colors.textTertiary }]}>{WEEKDAY_LABELS_SHORT[d.getDay()]}</Text>
@@ -64,17 +69,18 @@ export function WeekView({ dateKey, onChangeDate }: WeekViewProps) {
                   },
                 ]}
               >
-                <Text style={[type.bodyMedium, { color: isSelected ? colors.onPrimary : colors.textPrimary }]}>
+                <Text style={[type.bodySmall, { color: isSelected ? colors.onPrimary : colors.textPrimary }]}>
                   {d.getDate()}
                 </Text>
               </View>
-              <View style={[styles.dot, { backgroundColor: count > 0 ? colors.primary : 'transparent' }]} />
             </Pressable>
           );
         })}
       </View>
 
-      <DayAgendaList dateKey={dateKey} />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingBottom: 160 }} contentOffset={{ x: 0, y: initialOffset }}>
+        <TimeGrid columns={columns} categoryMap={categoryMap} onPressActivity={(id) => router.push(`/activity/${id}`)} hourHeight={HOUR_HEIGHT} dense />
+      </ScrollView>
     </View>
   );
 }
@@ -82,7 +88,6 @@ export function WeekView({ dateKey, onChangeDate }: WeekViewProps) {
 const styles = StyleSheet.create({
   nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   strip: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: 8 },
-  dayCell: { alignItems: 'center', gap: 4, width: 40 },
-  dayNumber: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 4, height: 4, borderRadius: 2 },
+  dayCell: { flex: 1, alignItems: 'center', gap: 4 },
+  dayNumber: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' },
 });

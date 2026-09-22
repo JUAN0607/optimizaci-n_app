@@ -22,6 +22,11 @@ export function formatTime(time: string | null): string {
   return time;
 }
 
+export function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 export function addDaysToKey(dateKey: string, days: number): string {
   return toDateKey(addDays(parseDateKey(dateKey), days));
 }
