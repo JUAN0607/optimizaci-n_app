@@ -7,6 +7,7 @@ import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
 import { createActivity } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
+import { scheduleActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { toDateKey } from '@/utils/date';
 
@@ -22,19 +23,28 @@ export default function CreateReminderScreen() {
 
   const save = () => {
     if (!canSave) return;
-    createActivity({
+    const activityDate = toDateKey(date);
+    const activityStartTime = time.toTimeString().slice(0, 5);
+    const activity = createActivity({
       title: title.trim(),
       notes: null,
       type: 'REMINDER',
       categoryId: null,
-      date: toDateKey(date),
-      startTime: time.toTimeString().slice(0, 5),
+      date: activityDate,
+      startTime: activityStartTime,
       endTime: null,
       duration: null,
       priority: null,
       recurrenceRule: null,
       reminder: { enabled: true, minutesBefore: 0 },
       location: null,
+    });
+    scheduleActivityReminder({
+      activityId: activity.id,
+      title: activity.title,
+      date: activityDate,
+      startTime: activityStartTime,
+      minutesBefore: 0,
     });
     bumpDataVersion();
     router.back();

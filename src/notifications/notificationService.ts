@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
 import { getDb, newId } from '@/db/client';
+import { getSettings } from '@/db/repositories/settingsRepository';
 import type { NotificationMapEntry } from '@/types/entities';
 import { combineDateAndTime } from '@/utils/date';
 
@@ -56,7 +57,7 @@ export async function scheduleActivityReminder(params: {
   minutesBefore: number;
 }) {
   await cancelEntityNotification('ACTIVITY', params.activityId);
-  if (!params.startTime) return;
+  if (!params.startTime || !getSettings().notificationsEnabled) return;
 
   const fireDate = combineDateAndTime(params.date, params.startTime);
   fireDate.setMinutes(fireDate.getMinutes() - params.minutesBefore);
@@ -75,6 +76,7 @@ export async function scheduleActivityReminder(params: {
 
 export async function scheduleHabitReminder(params: { habitId: string; name: string; time: string }) {
   await cancelEntityNotification('HABIT', params.habitId);
+  if (!getSettings().notificationsEnabled) return;
 
   const [hour, minute] = params.time.split(':').map(Number);
   const notificationId = await Notifications.scheduleNotificationAsync({
@@ -87,6 +89,7 @@ export async function scheduleHabitReminder(params: { habitId: string; name: str
 
 export async function scheduleDailySummary(time = '08:00') {
   await cancelEntityNotification('DAILY_SUMMARY', 'singleton');
+  if (!getSettings().notificationsEnabled) return;
   const [hour, minute] = time.split(':').map(Number);
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: { title: 'RITMO', body: 'Resumen de hoy' },
@@ -97,6 +100,7 @@ export async function scheduleDailySummary(time = '08:00') {
 
 export async function scheduleWeeklySummary(weekday = 2 /* Monday, expo-notifications: 1=Sun..7=Sat */, time = '08:00') {
   await cancelEntityNotification('WEEKLY_SUMMARY', 'singleton');
+  if (!getSettings().notificationsEnabled) return;
   const [hour, minute] = time.split(':').map(Number);
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: { title: 'RITMO', body: 'Tu semana' },
