@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { CompletionToggle } from '@/components/CompletionToggle';
+import { HabitHeatmap } from '@/components/HabitHeatmap';
 import { MetricCard } from '@/components/MetricCard';
 import { TextField } from '@/components/TextField';
 import { calculateStreak } from '@/analytics/streaks';
@@ -15,8 +16,8 @@ import { getLogForDate, listLogsForHabit, logHabit } from '@/db/repositories/hab
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
-import { describeRecurrence, isScheduledDay } from '@/utils/recurrence';
-import { addDaysToKey, todayKey } from '@/utils/date';
+import { describeRecurrence } from '@/utils/recurrence';
+import { todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
 
 export default function HabitDetailScreen() {
@@ -76,8 +77,6 @@ export default function HabitDetailScreen() {
     ]);
   };
 
-  const last28 = Array.from({ length: 28 }, (_, i) => addDaysToKey(today, -(27 - i)));
-  const logByDate = new Map(logs.map((l) => [l.date, l]));
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -158,15 +157,8 @@ export default function HabitDetailScreen() {
         </View>
 
         <View>
-          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>ÚLTIMOS 28 DÍAS</Text>
-          <View style={styles.grid}>
-            {last28.map((dateKey) => {
-              const log = logByDate.get(dateKey);
-              const scheduled = isScheduledDay(habit.recurrenceRule, dateKey);
-              const bg = log?.status === 'COMPLETED' ? colors.success : scheduled ? colors.surfaceAlt : 'transparent';
-              return <View key={dateKey} style={[styles.dot, { backgroundColor: bg }]} />;
-            })}
-          </View>
+          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>CONSISTENCIA</Text>
+          <HabitHeatmap habit={habit} logs={logs} color={category?.color ?? colors.success} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -177,7 +169,5 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   card: {},
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  dot: { width: 18, height: 18, borderRadius: 4 },
   registerButton: { paddingHorizontal: 16, paddingVertical: 12 },
 });
