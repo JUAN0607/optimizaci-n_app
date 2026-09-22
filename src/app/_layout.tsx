@@ -52,6 +52,7 @@ export default function RootLayout() {
               <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
               <Stack.Screen name="activity/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/task" options={{ presentation: 'modal' }} />
@@ -59,6 +60,8 @@ export default function RootLayout() {
               <Stack.Screen name="create/habit" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/routine" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/reminder" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="create/category" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="create/goal" options={{ presentation: 'modal' }} />
             </Stack>
             <CreateActionSheet />
           </BottomSheetModalProvider>

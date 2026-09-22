@@ -1,16 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
+import { listCategories } from '@/db/repositories/categoryRepository';
 import { getSettings, updateSettings } from '@/db/repositories/settingsRepository';
+import { resetAllData } from '@/db/reset';
 import { useAppStore } from '@/hooks/useAppStore';
-import { useCategories } from '@/hooks/useCategories';
 import { cancelEntityNotification, scheduleDailySummary, scheduleWeeklySummary } from '@/notifications/notificationService';
 import { exportAllDataAsJson } from '@/services/exportService';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -20,7 +21,10 @@ export default function SettingsScreen() {
   const { colors, radius, spacing, type, shadow } = useTheme();
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const themeMode = useAppStore((s) => s.themeMode);
-  const categories = useCategories();
+  const dataVersion = useAppStore((s) => s.dataVersion);
+  const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
+  const categories = useMemo(() => listCategories(true), [dataVersion]);
   const [settings, setSettings] = useState<AppSettings>(() => getSettings());
   const [name, setName] = useState(settings.userName ?? '');
 
@@ -32,6 +36,29 @@ export default function SettingsScreen() {
   const onExport = async () => {
     const json = exportAllDataAsJson();
     await Share.share({ message: json, title: 'RITMO — respaldo de datos' });
+  };
+
+  const onReplayOnboarding = () => {
+    router.push('/onboarding');
+  };
+
+  const onResetData = () => {
+    Alert.alert(
+      'Borrar todos los datos',
+      'Esto elimina permanentemente tus actividades, hábitos, rutinas y metas. No se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Borrar todo',
+          style: 'destructive',
+          onPress: async () => {
+            await resetAllData();
+            bumpDataVersion();
+            router.back();
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -72,9 +99,32 @@ export default function SettingsScreen() {
         <Section title="Categorías" colors={colors} type={type}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {categories.map((c) => (
-              <CategoryBadge key={c.id} category={c} />
+              <Pressable
+                key={c.id}
+                onPress={() => router.push({ pathname: '/create/category', params: { id: c.id } })}
+                style={{ opacity: c.isActive ? 1 : 0.4 }}
+              >
+                <CategoryBadge category={c} />
+              </Pressable>
             ))}
+            <Pressable
+              onPress={() => router.push('/create/category')}
+              style={[styles.row, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 3 }]}
+            >
+              <Ionicons name="add" size={14} color={colors.primary} />
+              <Text style={[type.caption, { color: colors.primary }]}>Agregar</Text>
+            </Pressable>
           </View>
+        </Section>
+
+        <Section title="Metas" colors={colors} type={type}>
+          <Pressable
+            onPress={() => router.push('/goals')}
+            style={[styles.row, shadow.card, { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, justifyContent: 'space-between' }]}
+          >
+            <Text style={[type.bodyMedium, { color: colors.textPrimary }]}>Ver mis metas</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </Pressable>
         </Section>
 
         <Section title="Notificaciones" colors={colors} type={type}>
@@ -120,6 +170,14 @@ export default function SettingsScreen() {
           <Text style={[type.bodySmall, { color: colors.textTertiary, marginTop: spacing.xs }]}>
             Tus datos viven únicamente en este iPhone. RITMO no usa ningún servidor.
           </Text>
+
+          <Pressable
+            onPress={onResetData}
+            style={[styles.row, { marginTop: spacing.sm, padding: spacing.md, borderRadius: radius.md }]}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.statusOverdue} />
+            <Text style={[type.bodyMedium, { color: colors.statusOverdue }]}>Borrar todos los datos</Text>
+          </Pressable>
         </Section>
 
         <Section title="Acerca de" colors={colors} type={type}>
@@ -127,6 +185,9 @@ export default function SettingsScreen() {
           <Text style={[type.bodySmall, { color: colors.textTertiary, marginTop: 2 }]}>
             Tu sistema operativo personal para el tiempo.
           </Text>
+          <Pressable onPress={onReplayOnboarding} style={{ marginTop: spacing.sm }}>
+            <Text style={[type.bodyMedium, { color: colors.primary }]}>Ver introducción de nuevo</Text>
+          </Pressable>
         </Section>
       </ScrollView>
     </SafeAreaView>
