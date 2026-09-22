@@ -65,7 +65,7 @@ export function seedIfEmpty() {
 
   const meditar = createHabit({
     name: 'Meditar',
-    icon: 'lotus',
+    icon: 'flower-outline',
     categoryId: byName.get('Salud') ?? null,
     measurementType: 'CHECKBOX',
     target: null,
@@ -78,7 +78,7 @@ export function seedIfEmpty() {
 
   createHabit({
     name: 'Beber agua',
-    icon: 'droplet',
+    icon: 'water-outline',
     categoryId: byName.get('Salud') ?? null,
     measurementType: 'QUANTITY',
     target: 8,
@@ -102,7 +102,7 @@ export function seedIfEmpty() {
 
   createHabit({
     name: 'Correr 5 km',
-    icon: 'run',
+    icon: 'walk-outline',
     categoryId: byName.get('Salud') ?? null,
     measurementType: 'DISTANCE',
     target: 5,

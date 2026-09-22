@@ -20,8 +20,10 @@ export function MetricCard({ label, value, sublabel, accentColor }: MetricCardPr
         { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg },
       ]}
     >
-      <Text style={[type.h1, { color: accentColor ?? colors.textPrimary }]}>{value}</Text>
-      <Text style={[type.bodySmall, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[type.h1, { color: accentColor ?? colors.textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={[type.caption, { color: colors.textSecondary }]}>{label}</Text>
       {sublabel && <Text style={[type.caption, { color: colors.textTertiary, marginTop: 2 }]}>{sublabel}</Text>}
     </View>
   );
@@ -30,7 +32,7 @@ export function MetricCard({ label, value, sublabel, accentColor }: MetricCardPr
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    minWidth: 140,
+    minWidth: 0,
     gap: 2,
   },
 });

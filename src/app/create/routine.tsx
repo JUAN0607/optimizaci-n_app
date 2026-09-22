@@ -42,7 +42,7 @@ export default function CreateRoutineScreen() {
     const validItems = items.filter((i) => i.title.trim().length > 0);
     createRoutine({
       name: name.trim(),
-      icon: 'sunrise-outline',
+      icon: 'sunny-outline',
       items: validItems.map((item, index) => ({
         title: item.title.trim(),
         time: item.time.trim() || null,
