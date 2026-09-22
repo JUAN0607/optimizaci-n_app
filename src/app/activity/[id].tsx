@@ -43,6 +43,8 @@ export default function ActivityDetailScreen() {
 
   const category = activity.categoryId ? (categoryMap.get(activity.categoryId) ?? null) : null;
   const isCompleted = activity.status === 'COMPLETED';
+  const editRoute =
+    activity.type === 'EVENT' ? '/create/event' : activity.type === 'REMINDER' ? '/create/reminder' : '/create/task';
 
   const toggleComplete = () => {
     const nextStatus = isCompleted ? 'PENDING' : 'COMPLETED';
@@ -93,9 +95,14 @@ export default function ActivityDetailScreen() {
         <Pressable onPress={() => router.back()} accessibilityLabel="Cerrar" hitSlop={8}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </Pressable>
-        <Pressable onPress={confirmDelete} accessibilityLabel="Eliminar" hitSlop={8}>
-          <Ionicons name="trash-outline" size={22} color={colors.statusOverdue} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: spacing.lg }}>
+          <Pressable onPress={() => router.push({ pathname: editRoute, params: { id: activity.id } })} accessibilityLabel="Editar" hitSlop={8}>
+            <Ionicons name="pencil-outline" size={22} color={colors.primary} />
+          </Pressable>
+          <Pressable onPress={confirmDelete} accessibilityLabel="Eliminar" hitSlop={8}>
+            <Ionicons name="trash-outline" size={22} color={colors.statusOverdue} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>

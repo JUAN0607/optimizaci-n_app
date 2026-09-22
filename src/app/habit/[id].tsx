@@ -85,9 +85,18 @@ export default function HabitDetailScreen() {
         <Pressable onPress={() => router.back()} accessibilityLabel="Cerrar" hitSlop={8}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </Pressable>
-        <Pressable onPress={confirmDelete} accessibilityLabel="Eliminar" hitSlop={8}>
-          <Ionicons name="trash-outline" size={22} color={colors.statusOverdue} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: spacing.lg }}>
+          <Pressable
+            onPress={() => router.push({ pathname: '/create/habit', params: { id: habit.id } })}
+            accessibilityLabel="Editar"
+            hitSlop={8}
+          >
+            <Ionicons name="pencil-outline" size={22} color={colors.primary} />
+          </Pressable>
+          <Pressable onPress={confirmDelete} accessibilityLabel="Eliminar" hitSlop={8}>
+            <Ionicons name="trash-outline" size={22} color={colors.statusOverdue} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>

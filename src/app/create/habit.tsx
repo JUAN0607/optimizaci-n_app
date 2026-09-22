@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -8,10 +8,11 @@ import { FilterChip } from '@/components/FilterChip';
 import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
 import { MEASUREMENT_LABELS, WEEKDAY_LABELS_SHORT } from '@/constants/labels';
-import { createHabit } from '@/db/repositories/habitRepository';
+import { createHabit, getHabit, updateHabit } from '@/db/repositories/habitRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MeasurementType, RecurrenceRule } from '@/types/entities';
+import { todayKey } from '@/utils/date';
 
 const ICONS: (keyof typeof Ionicons.glyphMap)[] = [
   'body-outline',
@@ -34,22 +35,63 @@ const FREQUENCY_LABELS: Record<FrequencyType, string> = {
   EVERY_X_DAYS: 'Cada X días',
 };
 
+interface FrequencyState {
+  frequencyType: FrequencyType;
+  specificDays: number[];
+  timesPerWeek: string;
+  dayOfMonth: string;
+  everyXDays: string;
+  everyXAnchor: string;
+}
+
+function deriveFrequencyState(rule: RecurrenceRule | undefined): FrequencyState {
+  const base: FrequencyState = {
+    frequencyType: 'DAILY',
+    specificDays: [1, 3, 5],
+    timesPerWeek: '3',
+    dayOfMonth: '1',
+    everyXDays: '2',
+    everyXAnchor: todayKey(),
+  };
+  if (!rule) return base;
+  switch (rule.type) {
+    case 'SPECIFIC_DAYS':
+      return { ...base, frequencyType: 'SPECIFIC_DAYS', specificDays: rule.days };
+    case 'X_TIMES_PER_WEEK':
+      return { ...base, frequencyType: 'X_TIMES_PER_WEEK', timesPerWeek: String(rule.times) };
+    case 'MONTHLY':
+      return { ...base, frequencyType: 'MONTHLY', dayOfMonth: String(rule.dayOfMonth) };
+    case 'EVERY_X_DAYS':
+      return { ...base, frequencyType: 'EVERY_X_DAYS', everyXDays: String(rule.interval), everyXAnchor: rule.anchorDate };
+    default:
+      return base;
+  }
+}
+
 export default function CreateHabitScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existingHabit = id ? getHabit(id) : null;
+  const isEditing = !!existingHabit;
+
   const { colors, spacing, type } = useTheme();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
-  const [icon, setIcon] = useState<keyof typeof Ionicons.glyphMap>(ICONS[0]);
-  const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [frequencyType, setFrequencyType] = useState<FrequencyType>('DAILY');
-  const [specificDays, setSpecificDays] = useState<number[]>([1, 3, 5]);
-  const [timesPerWeek, setTimesPerWeek] = useState('3');
-  const [dayOfMonth, setDayOfMonth] = useState('1');
-  const [everyXDays, setEveryXDays] = useState('2');
-  const [measurementType, setMeasurementType] = useState<MeasurementType>('CHECKBOX');
-  const [target, setTarget] = useState('');
-  const [targetUnit, setTargetUnit] = useState('');
-  const [notes, setNotes] = useState('');
+  const [icon, setIcon] = useState<keyof typeof Ionicons.glyphMap>(
+    () => (existingHabit?.icon as keyof typeof Ionicons.glyphMap) ?? ICONS[0],
+  );
+  const [name, setName] = useState(existingHabit?.name ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(existingHabit?.categoryId ?? null);
+  const initialFrequency = deriveFrequencyState(existingHabit?.recurrenceRule);
+  const [frequencyType, setFrequencyType] = useState<FrequencyType>(initialFrequency.frequencyType);
+  const [specificDays, setSpecificDays] = useState<number[]>(initialFrequency.specificDays);
+  const [timesPerWeek, setTimesPerWeek] = useState(initialFrequency.timesPerWeek);
+  const [dayOfMonth, setDayOfMonth] = useState(initialFrequency.dayOfMonth);
+  const [everyXDays, setEveryXDays] = useState(initialFrequency.everyXDays);
+  const [everyXAnchor] = useState(initialFrequency.everyXAnchor);
+  const [measurementType, setMeasurementType] = useState<MeasurementType>(existingHabit?.measurementType ?? 'CHECKBOX');
+  const [target, setTarget] = useState(existingHabit?.target != null ? String(existingHabit.target) : '');
+  const [targetUnit, setTargetUnit] = useState(existingHabit?.targetUnit ?? '');
+  const [notes, setNotes] = useState(existingHabit?.notes ?? '');
 
   const canSave = name.trim().length > 0;
 
@@ -64,13 +106,13 @@ export default function CreateHabitScreen() {
       case 'MONTHLY':
         return { type: 'MONTHLY', dayOfMonth: Math.min(31, Math.max(1, Number(dayOfMonth) || 1)) };
       case 'EVERY_X_DAYS':
-        return { type: 'EVERY_X_DAYS', interval: Math.max(1, Number(everyXDays) || 1), anchorDate: new Date().toISOString().slice(0, 10) };
+        return { type: 'EVERY_X_DAYS', interval: Math.max(1, Number(everyXDays) || 1), anchorDate: everyXAnchor };
     }
   };
 
   const save = () => {
     if (!canSave) return;
-    createHabit({
+    const payload = {
       name: name.trim(),
       icon,
       categoryId,
@@ -78,9 +120,14 @@ export default function CreateHabitScreen() {
       target: measurementType === 'CHECKBOX' ? null : Number(target) || null,
       targetUnit: measurementType === 'CHECKBOX' ? null : targetUnit.trim() || null,
       recurrenceRule: buildRecurrence(),
-      reminder: null,
+      reminder: existingHabit?.reminder ?? null,
       notes: notes.trim() || null,
-    });
+    };
+    if (existingHabit) {
+      updateHabit(existingHabit.id, payload);
+    } else {
+      createHabit(payload);
+    }
     bumpDataVersion();
     router.back();
   };
@@ -90,7 +137,7 @@ export default function CreateHabitScreen() {
   };
 
   return (
-    <FormScreen title="Nuevo hábito" onSave={save} saveDisabled={!canSave}>
+    <FormScreen title={isEditing ? 'Editar hábito' : 'Nuevo hábito'} onSave={save} saveDisabled={!canSave}>
       <View style={{ gap: spacing.xs }}>
         <Text style={[type.label, { color: colors.textSecondary }]}>ÍCONO</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
@@ -113,7 +160,7 @@ export default function CreateHabitScreen() {
         </View>
       </View>
 
-      <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Ej. Meditar" autoFocus />
+      <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Ej. Meditar" autoFocus={!isEditing} />
       <CategoryPicker value={categoryId} onChange={setCategoryId} />
 
       <View style={{ gap: spacing.xs }}>

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -7,28 +7,40 @@ import { DateTimeField } from '@/components/DateTimeField';
 import { FilterChip } from '@/components/FilterChip';
 import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
-import { createActivity } from '@/db/repositories/activityRepository';
+import { createActivity, getActivity, updateActivity } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { scheduleActivityReminder } from '@/notifications/notificationService';
+import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { RecurrenceRule } from '@/types/entities';
-import { toDateKey } from '@/utils/date';
+import { combineDateAndTime, toDateKey } from '@/utils/date';
 
 const REMINDER_OPTIONS = [5, 15, 30, 60];
 
 export default function CreateEventScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existingActivity = id ? getActivity(id) : null;
+  const isEditing = !!existingActivity;
+
   const { colors, spacing, type } = useTheme();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
-  const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(() => new Date(Date.now() + 60 * 60 * 1000));
-  const [location, setLocation] = useState('');
-  const [repeats, setRepeats] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState<number | null>(15);
-  const [notes, setNotes] = useState('');
+  const [title, setTitle] = useState(existingActivity?.title ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(existingActivity?.categoryId ?? null);
+  const [date, setDate] = useState(() => (existingActivity ? combineDateAndTime(existingActivity.date, null) : new Date()));
+  const [startTime, setStartTime] = useState(() =>
+    existingActivity ? combineDateAndTime(existingActivity.date, existingActivity.startTime) : new Date(),
+  );
+  const [endTime, setEndTime] = useState(() =>
+    existingActivity?.endTime
+      ? combineDateAndTime(existingActivity.date, existingActivity.endTime)
+      : new Date(Date.now() + 60 * 60 * 1000),
+  );
+  const [location, setLocation] = useState(existingActivity?.location ?? '');
+  const [repeats, setRepeats] = useState(existingActivity?.isRecurring ?? false);
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(
+    existingActivity ? (existingActivity.reminder?.enabled ? existingActivity.reminder.minutesBefore : null) : 15,
+  );
+  const [notes, setNotes] = useState(existingActivity?.notes ?? '');
 
   const canSave = title.trim().length > 0;
 
@@ -37,10 +49,10 @@ export default function CreateEventScreen() {
     const recurrenceRule: RecurrenceRule | null = repeats ? { type: 'DAILY' } : null;
     const activityDate = toDateKey(date);
     const activityStartTime = startTime.toTimeString().slice(0, 5);
-    const activity = createActivity({
+    const payload = {
       title: title.trim(),
       notes: notes.trim() || null,
-      type: 'EVENT',
+      type: 'EVENT' as const,
       categoryId,
       date: activityDate,
       startTime: activityStartTime,
@@ -51,23 +63,35 @@ export default function CreateEventScreen() {
       isRecurring: repeats,
       reminder: reminderMinutes ? { enabled: true, minutesBefore: reminderMinutes } : null,
       location: location.trim() || null,
-    });
+    };
+
+    const activityId = existingActivity ? existingActivity.id : createActivity(payload).id;
+    if (existingActivity) updateActivity(activityId, payload);
+
     if (reminderMinutes) {
       scheduleActivityReminder({
-        activityId: activity.id,
-        title: activity.title,
+        activityId,
+        title: payload.title,
         date: activityDate,
         startTime: activityStartTime,
         minutesBefore: reminderMinutes,
       });
+    } else if (isEditing) {
+      cancelEntityNotification('ACTIVITY', activityId);
     }
     bumpDataVersion();
     router.back();
   };
 
   return (
-    <FormScreen title="Nuevo evento" onSave={save} saveDisabled={!canSave}>
-      <TextField label="Nombre" value={title} onChangeText={setTitle} placeholder="Nombre del evento" autoFocus />
+    <FormScreen title={isEditing ? 'Editar evento' : 'Nuevo evento'} onSave={save} saveDisabled={!canSave}>
+      <TextField
+        label="Nombre"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Nombre del evento"
+        autoFocus={!isEditing}
+      />
       <CategoryPicker value={categoryId} onChange={setCategoryId} />
 
       <DateTimeField label="Fecha" mode="date" value={date} onChange={setDate} />

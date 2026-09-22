@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -9,29 +9,37 @@ import { FormScreen } from '@/components/FormScreen';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
 import { PRIORITY_LABELS } from '@/constants/labels';
-import { createActivity } from '@/db/repositories/activityRepository';
+import { createActivity, getActivity, updateActivity } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { scheduleActivityReminder } from '@/notifications/notificationService';
+import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Priority, RecurrenceRule } from '@/types/entities';
-import { toDateKey } from '@/utils/date';
+import { combineDateAndTime, toDateKey } from '@/utils/date';
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 const REMINDER_OPTIONS = [5, 15, 30, 60];
 
 export default function CreateTaskScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existingActivity = id ? getActivity(id) : null;
+  const isEditing = !!existingActivity;
+
   const { colors, spacing, type } = useTheme();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
-  const [title, setTitle] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [duration, setDuration] = useState<number | null>(30);
-  const [priority, setPriority] = useState<Priority>('MEDIUM');
-  const [repeats, setRepeats] = useState(false);
-  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null);
-  const [notes, setNotes] = useState('');
+  const [title, setTitle] = useState(existingActivity?.title ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(existingActivity?.categoryId ?? null);
+  const [date, setDate] = useState(() => (existingActivity ? combineDateAndTime(existingActivity.date, null) : new Date()));
+  const [startTime, setStartTime] = useState(() =>
+    existingActivity ? combineDateAndTime(existingActivity.date, existingActivity.startTime) : new Date(),
+  );
+  const [duration, setDuration] = useState<number | null>(existingActivity?.duration ?? 30);
+  const [priority, setPriority] = useState<Priority>(existingActivity?.priority ?? 'MEDIUM');
+  const [repeats, setRepeats] = useState(existingActivity?.isRecurring ?? false);
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(
+    existingActivity?.reminder?.enabled ? existingActivity.reminder.minutesBefore : null,
+  );
+  const [notes, setNotes] = useState(existingActivity?.notes ?? '');
 
   const canSave = title.trim().length > 0;
 
@@ -40,10 +48,10 @@ export default function CreateTaskScreen() {
     const recurrenceRule: RecurrenceRule | null = repeats ? { type: 'DAILY' } : null;
     const activityDate = toDateKey(date);
     const activityStartTime = startTime.toTimeString().slice(0, 5);
-    const activity = createActivity({
+    const payload = {
       title: title.trim(),
       notes: notes.trim() || null,
-      type: 'TASK',
+      type: 'TASK' as const,
       categoryId,
       date: activityDate,
       startTime: activityStartTime,
@@ -54,23 +62,35 @@ export default function CreateTaskScreen() {
       isRecurring: repeats,
       reminder: reminderMinutes ? { enabled: true, minutesBefore: reminderMinutes } : null,
       location: null,
-    });
+    };
+
+    const activityId = existingActivity ? existingActivity.id : createActivity(payload).id;
+    if (existingActivity) updateActivity(activityId, payload);
+
     if (reminderMinutes) {
       scheduleActivityReminder({
-        activityId: activity.id,
-        title: activity.title,
+        activityId,
+        title: payload.title,
         date: activityDate,
         startTime: activityStartTime,
         minutesBefore: reminderMinutes,
       });
+    } else if (isEditing) {
+      cancelEntityNotification('ACTIVITY', activityId);
     }
     bumpDataVersion();
     router.back();
   };
 
   return (
-    <FormScreen title="Nueva tarea" onSave={save} saveDisabled={!canSave}>
-      <TextField label="Título" value={title} onChangeText={setTitle} placeholder="¿Qué necesitas hacer?" autoFocus />
+    <FormScreen title={isEditing ? 'Editar tarea' : 'Nueva tarea'} onSave={save} saveDisabled={!canSave}>
+      <TextField
+        label="Título"
+        value={title}
+        onChangeText={setTitle}
+        placeholder="¿Qué necesitas hacer?"
+        autoFocus={!isEditing}
+      />
       <CategoryPicker value={categoryId} onChange={setCategoryId} />
 
       <View style={{ flexDirection: 'row', gap: spacing.md }}>
