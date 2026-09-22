@@ -26,7 +26,6 @@ export default function RootLayout() {
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
   const setHydrated = useAppStore((s) => s.setHydrated);
   const hydrated = useAppStore((s) => s.hydrated);
-  const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
   useEffect(() => {
     initDatabase();
@@ -49,10 +48,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <BottomSheetModalProvider>
-            <Stack
-              screenOptions={{ headerShown: false }}
-              initialRouteName={onboardingCompleted ? '(tabs)' : 'onboarding'}
-            >
+            <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="settings" options={{ presentation: 'modal' }} />

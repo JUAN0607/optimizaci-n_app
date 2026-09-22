@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,6 +45,7 @@ export default function HoyScreen() {
   const activities = useActivitiesForDate(date);
   const categoryMap = useCategoryMap();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
+  const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
 
   const { completed, total, pending, current } = useMemo(() => {
     const completedCount = activities.filter((a) => a.status === 'COMPLETED').length;
@@ -68,6 +69,12 @@ export default function HoyScreen() {
     setActivityStatus(id, status === 'COMPLETED' ? 'PENDING' : 'COMPLETED');
     bumpDataVersion();
   };
+
+  // Expo Router resolves "/" (this screen) on cold launch regardless of Stack's
+  // initialRouteName, so the onboarding gate has to live here rather than in the layout.
+  if (!onboardingCompleted) {
+    return <Redirect href="/onboarding" />;
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
