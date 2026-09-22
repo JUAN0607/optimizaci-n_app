@@ -42,6 +42,7 @@ export interface Activity {
   status: ActivityStatus;
   isRecurring: boolean;
   recurrenceRule: RecurrenceRule | null;
+  recurrenceGroupId: string | null;
   reminder: ReminderConfig | null;
   location: string | null;
   createdAt: string;

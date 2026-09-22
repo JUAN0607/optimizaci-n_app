@@ -117,6 +117,15 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       `);
     },
   },
+  {
+    version: 2,
+    up: (db) => {
+      // Links a recurring activity's materialized occurrences together so editing/removing
+      // the series can find its siblings without re-deriving the schedule from scratch.
+      db.execSync(`ALTER TABLE activity ADD COLUMN recurrence_group_id TEXT;`);
+      db.execSync(`CREATE INDEX IF NOT EXISTS idx_activity_recurrence_group ON activity(recurrence_group_id);`);
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

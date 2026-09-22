@@ -6,10 +6,11 @@ import { CategoryPicker } from '@/components/CategoryPicker';
 import { DateTimeField } from '@/components/DateTimeField';
 import { FilterChip } from '@/components/FilterChip';
 import { FormScreen } from '@/components/FormScreen';
+import { RecurrencePicker } from '@/components/RecurrencePicker';
 import { TextField } from '@/components/TextField';
-import { createActivity, getActivity, updateActivity } from '@/db/repositories/activityRepository';
+import { createActivity, getActivity, updateActivityWithRecurrence } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
+import { cancelEntityNotification, scheduleActivityReminder, scheduleRecurringActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { RecurrenceRule } from '@/types/entities';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
@@ -36,7 +37,7 @@ export default function CreateEventScreen() {
       : new Date(Date.now() + 60 * 60 * 1000),
   );
   const [location, setLocation] = useState(existingActivity?.location ?? '');
-  const [repeats, setRepeats] = useState(existingActivity?.isRecurring ?? false);
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(existingActivity?.recurrenceRule ?? null);
   const [reminderMinutes, setReminderMinutes] = useState<number | null>(
     existingActivity ? (existingActivity.reminder?.enabled ? existingActivity.reminder.minutesBefore : null) : 15,
   );
@@ -46,7 +47,6 @@ export default function CreateEventScreen() {
 
   const save = () => {
     if (!canSave) return;
-    const recurrenceRule: RecurrenceRule | null = repeats ? { type: 'DAILY' } : null;
     const activityDate = toDateKey(date);
     const activityStartTime = startTime.toTimeString().slice(0, 5);
     const payload = {
@@ -60,15 +60,28 @@ export default function CreateEventScreen() {
       duration: null,
       priority: null,
       recurrenceRule,
-      isRecurring: repeats,
+      isRecurring: !!recurrenceRule,
       reminder: reminderMinutes ? { enabled: true, minutesBefore: reminderMinutes } : null,
       location: location.trim() || null,
     };
 
-    const activityId = existingActivity ? existingActivity.id : createActivity(payload).id;
-    if (existingActivity) updateActivity(activityId, payload);
+    let activityId: string;
+    if (existingActivity) {
+      activityId = existingActivity.id;
+      updateActivityWithRecurrence(activityId, payload);
+    } else {
+      activityId = createActivity(payload).id;
+    }
 
-    if (reminderMinutes) {
+    if (reminderMinutes && recurrenceRule) {
+      scheduleRecurringActivityReminder({
+        activityId,
+        title: payload.title,
+        startTime: activityStartTime,
+        minutesBefore: reminderMinutes,
+        recurrenceRule,
+      });
+    } else if (reminderMinutes) {
       scheduleActivityReminder({
         activityId,
         title: payload.title,
@@ -102,13 +115,7 @@ export default function CreateEventScreen() {
 
       <TextField label="Ubicación" value={location} onChangeText={setLocation} placeholder="Opcional" />
 
-      <View style={{ gap: spacing.xs }}>
-        <Text style={[type.label, { color: colors.textSecondary }]}>REPETICIÓN</Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <FilterChip label="Una vez" selected={!repeats} onPress={() => setRepeats(false)} />
-          <FilterChip label="Todos los días" selected={repeats} onPress={() => setRepeats(true)} />
-        </View>
-      </View>
+      <RecurrencePicker value={recurrenceRule} onChange={setRecurrenceRule} />
 
       <View style={{ gap: spacing.xs }}>
         <Text style={[type.label, { color: colors.textSecondary }]}>RECORDATORIO</Text>

@@ -1,5 +1,12 @@
 import { getDb, newId, nowIso } from '@/db/client';
 import type { Activity, ActivityStatus, ReminderConfig, RecurrenceRule } from '@/types/entities';
+import { addDaysToKey, todayKey } from '@/utils/date';
+import { isScheduledDay } from '@/utils/recurrence';
+
+// How far ahead a recurring task/event is materialized into real, individually completable/
+// editable rows. A year comfortably covers Plan's Year view without generating an unbounded
+// number of rows (SQLite handles low thousands of rows trivially for a single-user app).
+const RECURRENCE_HORIZON_DAYS = 365;
 
 interface ActivityRow {
   id: string;
@@ -15,6 +22,7 @@ interface ActivityRow {
   status: string;
   is_recurring: number;
   recurrence_rule: string | null;
+  recurrence_group_id: string | null;
   reminder: string | null;
   location: string | null;
   created_at: string;
@@ -37,6 +45,7 @@ function fromRow(row: ActivityRow): Activity {
     status: row.status as ActivityStatus,
     isRecurring: row.is_recurring === 1,
     recurrenceRule: row.recurrence_rule ? (JSON.parse(row.recurrence_rule) as RecurrenceRule) : null,
+    recurrenceGroupId: row.recurrence_group_id,
     reminder: row.reminder ? (JSON.parse(row.reminder) as ReminderConfig) : null,
     location: row.location,
     createdAt: row.created_at,
@@ -45,7 +54,10 @@ function fromRow(row: ActivityRow): Activity {
   };
 }
 
-export type ActivityInput = Omit<Activity, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'completedAt' | 'isRecurring'> & {
+export type ActivityInput = Omit<
+  Activity,
+  'id' | 'status' | 'createdAt' | 'updatedAt' | 'completedAt' | 'isRecurring' | 'recurrenceGroupId'
+> & {
   isRecurring?: boolean;
 };
 
@@ -72,23 +84,12 @@ export function getActivity(id: string): Activity | null {
   return row ? fromRow(row) : null;
 }
 
-export function createActivity(input: ActivityInput): Activity {
-  const db = getDb();
-  const timestamp = nowIso();
-  const activity: Activity = {
-    ...input,
-    id: newId(),
-    status: 'PENDING',
-    isRecurring: input.isRecurring ?? false,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    completedAt: null,
-  };
-  db.runSync(
+function insertActivityRow(activity: Activity): void {
+  getDb().runSync(
     `INSERT INTO activity
       (id, title, notes, type, category_id, date, start_time, end_time, duration, priority, status,
-       is_recurring, recurrence_rule, reminder, location, created_at, updated_at, completed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       is_recurring, recurrence_rule, recurrence_group_id, reminder, location, created_at, updated_at, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       activity.id,
       activity.title,
@@ -103,6 +104,7 @@ export function createActivity(input: ActivityInput): Activity {
       activity.status,
       activity.isRecurring ? 1 : 0,
       activity.recurrenceRule ? JSON.stringify(activity.recurrenceRule) : null,
+      activity.recurrenceGroupId,
       activity.reminder ? JSON.stringify(activity.reminder) : null,
       activity.location,
       activity.createdAt,
@@ -110,6 +112,63 @@ export function createActivity(input: ActivityInput): Activity {
       activity.completedAt,
     ],
   );
+}
+
+/**
+ * Generates one real row per future date matching `base`'s recurrence rule, from the day
+ * after `fromDateExclusive` out to the horizon. Each occurrence is an independent row —
+ * completing, rescheduling, or deleting one never touches the others — which is also how
+ * calendar apps model recurring event exceptions under the hood.
+ */
+function materializeFutureOccurrences(base: Activity, groupId: string, fromDateExclusive: string, skipDate?: string): void {
+  if (!base.recurrenceRule) return;
+  const timestamp = nowIso();
+  let cursor = fromDateExclusive;
+  for (let i = 0; i < RECURRENCE_HORIZON_DAYS; i++) {
+    cursor = addDaysToKey(cursor, 1);
+    if (cursor === skipDate) continue;
+    if (!isScheduledDay(base.recurrenceRule, cursor)) continue;
+    insertActivityRow({
+      ...base,
+      id: newId(),
+      date: cursor,
+      status: 'PENDING',
+      recurrenceGroupId: groupId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      completedAt: null,
+    });
+  }
+}
+
+function deleteFuturePendingSiblings(groupId: string, excludeId: string): void {
+  getDb().runSync(
+    `DELETE FROM activity WHERE recurrence_group_id = ? AND id != ? AND status = 'PENDING' AND date > ?`,
+    [groupId, excludeId, todayKey()],
+  );
+}
+
+export function createActivity(input: ActivityInput): Activity {
+  const timestamp = nowIso();
+  const activity: Activity = {
+    ...input,
+    id: newId(),
+    status: 'PENDING',
+    isRecurring: input.isRecurring ?? false,
+    recurrenceGroupId: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    completedAt: null,
+  };
+  insertActivityRow(activity);
+
+  if (activity.isRecurring && activity.recurrenceRule) {
+    const groupId = activity.id;
+    getDb().runSync('UPDATE activity SET recurrence_group_id = ? WHERE id = ?', [groupId, activity.id]);
+    activity.recurrenceGroupId = groupId;
+    materializeFutureOccurrences(activity, groupId, activity.date);
+  }
+
   return activity;
 }
 
@@ -140,6 +199,40 @@ export function updateActivity(id: string, input: Partial<ActivityInput>): void 
       id,
     ],
   );
+}
+
+/**
+ * Edit-flow update: applies the edit to this occurrence, then regenerates the *future,
+ * still-pending* occurrences of its series (from today forward) under the new rule/fields.
+ * Past and completed occurrences are never touched, so history stays intact — "leer 3 días
+ * a la semana" starting from an edit doesn't rewrite what already happened.
+ */
+export function updateActivityWithRecurrence(id: string, input: ActivityInput): void {
+  const existing = getActivity(id);
+  if (!existing) return;
+  updateActivity(id, input);
+
+  const wantsRecurring = !!(input.isRecurring && input.recurrenceRule);
+  const existingGroupId = existing.recurrenceGroupId;
+
+  if (!wantsRecurring) {
+    if (existingGroupId) {
+      deleteFuturePendingSiblings(existingGroupId, id);
+      getDb().runSync('UPDATE activity SET recurrence_group_id = NULL WHERE id = ?', [id]);
+    }
+    return;
+  }
+
+  const groupId = existingGroupId ?? id;
+  if (!existingGroupId) {
+    getDb().runSync('UPDATE activity SET recurrence_group_id = ? WHERE id = ?', [groupId, id]);
+  }
+  deleteFuturePendingSiblings(groupId, id);
+
+  const updated = getActivity(id);
+  if (updated) {
+    materializeFutureOccurrences(updated, groupId, todayKey(), updated.date);
+  }
 }
 
 export function setActivityStatus(id: string, status: ActivityStatus): void {

@@ -16,6 +16,7 @@ function makeActivity(overrides: Partial<Activity>): Activity {
     status: 'PENDING',
     isRecurring: false,
     recurrenceRule: null,
+    recurrenceGroupId: null,
     reminder: null,
     location: null,
     createdAt: '2026-09-22T00:00:00.000Z',

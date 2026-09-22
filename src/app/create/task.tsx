@@ -6,12 +6,13 @@ import { CategoryPicker } from '@/components/CategoryPicker';
 import { DateTimeField } from '@/components/DateTimeField';
 import { FilterChip } from '@/components/FilterChip';
 import { FormScreen } from '@/components/FormScreen';
+import { RecurrencePicker } from '@/components/RecurrencePicker';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
 import { PRIORITY_LABELS } from '@/constants/labels';
-import { createActivity, getActivity, updateActivity } from '@/db/repositories/activityRepository';
+import { createActivity, getActivity, updateActivityWithRecurrence } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
+import { cancelEntityNotification, scheduleActivityReminder, scheduleRecurringActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Priority, RecurrenceRule } from '@/types/entities';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
@@ -35,7 +36,7 @@ export default function CreateTaskScreen() {
   );
   const [duration, setDuration] = useState<number | null>(existingActivity?.duration ?? 30);
   const [priority, setPriority] = useState<Priority>(existingActivity?.priority ?? 'MEDIUM');
-  const [repeats, setRepeats] = useState(existingActivity?.isRecurring ?? false);
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(existingActivity?.recurrenceRule ?? null);
   const [reminderMinutes, setReminderMinutes] = useState<number | null>(
     existingActivity?.reminder?.enabled ? existingActivity.reminder.minutesBefore : null,
   );
@@ -45,7 +46,6 @@ export default function CreateTaskScreen() {
 
   const save = () => {
     if (!canSave) return;
-    const recurrenceRule: RecurrenceRule | null = repeats ? { type: 'DAILY' } : null;
     const activityDate = toDateKey(date);
     const activityStartTime = startTime.toTimeString().slice(0, 5);
     const payload = {
@@ -59,15 +59,28 @@ export default function CreateTaskScreen() {
       duration,
       priority,
       recurrenceRule,
-      isRecurring: repeats,
+      isRecurring: !!recurrenceRule,
       reminder: reminderMinutes ? { enabled: true, minutesBefore: reminderMinutes } : null,
       location: null,
     };
 
-    const activityId = existingActivity ? existingActivity.id : createActivity(payload).id;
-    if (existingActivity) updateActivity(activityId, payload);
+    let activityId: string;
+    if (existingActivity) {
+      activityId = existingActivity.id;
+      updateActivityWithRecurrence(activityId, payload);
+    } else {
+      activityId = createActivity(payload).id;
+    }
 
-    if (reminderMinutes) {
+    if (reminderMinutes && recurrenceRule) {
+      scheduleRecurringActivityReminder({
+        activityId,
+        title: payload.title,
+        startTime: activityStartTime,
+        minutesBefore: reminderMinutes,
+        recurrenceRule,
+      });
+    } else if (reminderMinutes) {
       scheduleActivityReminder({
         activityId,
         title: payload.title,
@@ -116,13 +129,7 @@ export default function CreateTaskScreen() {
         />
       </View>
 
-      <View style={{ gap: spacing.xs }}>
-        <Text style={[type.label, { color: colors.textSecondary }]}>REPETICIÓN</Text>
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <FilterChip label="Una vez" selected={!repeats} onPress={() => setRepeats(false)} />
-          <FilterChip label="Todos los días" selected={repeats} onPress={() => setRepeats(true)} />
-        </View>
-      </View>
+      <RecurrencePicker value={recurrenceRule} onChange={setRecurrenceRule} />
 
       <View style={{ gap: spacing.xs }}>
         <Text style={[type.label, { color: colors.textSecondary }]}>RECORDATORIO</Text>
