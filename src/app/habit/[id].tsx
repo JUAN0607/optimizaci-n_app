@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { CompletionToggle } from '@/components/CompletionToggle';
 import { MetricCard } from '@/components/MetricCard';
+import { TextField } from '@/components/TextField';
 import { calculateStreak } from '@/analytics/streaks';
 import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
 import { deleteHabit, getHabit } from '@/db/repositories/habitRepository';
@@ -115,11 +116,30 @@ export default function HabitDetailScreen() {
                 {todayLog?.status === 'COMPLETED' ? 'Completado' : 'Marcar como hecho'}
               </Text>
             </View>
+          ) : todayLog ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <CompletionToggle completed onPress={completeToday} size={28} />
+              <Text style={[type.body, { color: colors.textSecondary }]}>
+                Registrado: {todayLog.value} {habit.targetUnit ?? ''} · Meta: {habit.target ?? ''} {habit.targetUnit ?? ''}
+              </Text>
+            </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <Text style={[type.body, { color: colors.textSecondary }]}>
-                {todayLog ? `Registrado: ${todayLog.value} ${habit.targetUnit ?? ''}` : `Meta: ${habit.target ?? ''} ${habit.targetUnit ?? ''}`}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <TextField
+                  label=""
+                  value={pendingValue}
+                  onChangeText={setPendingValue}
+                  keyboardType="numeric"
+                  placeholder={`Meta: ${habit.target ?? ''} ${habit.targetUnit ?? ''}`}
+                />
+              </View>
+              <Pressable
+                onPress={completeToday}
+                style={[styles.registerButton, { backgroundColor: colors.primary, borderRadius: radius.md }]}
+              >
+                <Text style={[type.bodyMedium, { color: colors.onPrimary }]}>Registrar</Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -146,4 +166,5 @@ const styles = StyleSheet.create({
   card: {},
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   dot: { width: 18, height: 18, borderRadius: 4 },
+  registerButton: { paddingHorizontal: 16, paddingVertical: 12 },
 });
