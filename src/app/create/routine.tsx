@@ -72,7 +72,7 @@ export default function CreateRoutineScreen() {
               padding: spacing.sm,
             }}
           >
-            <View style={{ width: 64 }}>
+            <View style={{ width: 84 }}>
               <TextField label="" value={item.time} onChangeText={(v) => updateItem(index, { time: v })} placeholder="06:00" />
             </View>
             <View style={{ flex: 1 }}>
