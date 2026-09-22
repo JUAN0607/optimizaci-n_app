@@ -37,6 +37,9 @@ yarn-error.*
 # testing
 coverage/
 
+# local tooling runtime state
+.claude/scheduled_tasks.lock
+
 # typescript
 *.tsbuildinfo
 
