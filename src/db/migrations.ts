@@ -126,6 +126,23 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       db.execSync(`CREATE INDEX IF NOT EXISTS idx_activity_recurrence_group ON activity(recurrence_group_id);`);
     },
   },
+  {
+    version: 3,
+    up: (db) => {
+      // Per-day completion of an individual routine step, so a routine can be "run" like a
+      // checklist without turning each step into its own habit.
+      db.execSync(`
+        CREATE TABLE IF NOT EXISTS routine_item_log (
+          id TEXT PRIMARY KEY NOT NULL,
+          routine_item_id TEXT NOT NULL REFERENCES routine_item(id) ON DELETE CASCADE,
+          date TEXT NOT NULL,
+          completed_at TEXT NOT NULL,
+          UNIQUE(routine_item_id, date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_routine_item_log_item ON routine_item_log(routine_item_id);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

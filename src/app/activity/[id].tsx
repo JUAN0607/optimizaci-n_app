@@ -9,9 +9,10 @@ import { CompletionToggle } from '@/components/CompletionToggle';
 import { DateTimeField } from '@/components/DateTimeField';
 import { PriorityIndicator } from '@/components/PriorityIndicator';
 import { STATUS_LABELS } from '@/constants/labels';
-import { deleteActivity, getActivity, rescheduleActivity, setActivityStatus } from '@/db/repositories/activityRepository';
+import { deleteActivity, getActivity, rescheduleActivity, restoreActivity, setActivityStatus } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
+import { useUndoStore } from '@/hooks/useUndoStore';
 import { cancelEntityNotification, scheduleActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
@@ -23,6 +24,7 @@ export default function ActivityDetailScreen() {
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
   const dataVersion = useAppStore((s) => s.dataVersion);
   const categoryMap = useCategoryMap();
+  const showUndo = useUndoStore((s) => s.show);
   const [rescheduling, setRescheduling] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
@@ -80,10 +82,19 @@ export default function ActivityDetailScreen() {
         text: 'Eliminar',
         style: 'destructive',
         onPress: () => {
-          cancelEntityNotification('ACTIVITY', activity.id);
-          deleteActivity(activity.id);
+          const snapshot = activity;
+          cancelEntityNotification('ACTIVITY', snapshot.id);
+          deleteActivity(snapshot.id);
           bumpDataVersion();
           router.back();
+          // Deferred so the snackbar mounts after the modal's dismiss transition finishes —
+          // showing it immediately raced the native modal animation and swallowed its taps.
+          setTimeout(() => {
+            showUndo(`"${snapshot.title}" eliminada`, () => {
+              restoreActivity(snapshot);
+              bumpDataVersion();
+            });
+          }, 400);
         },
       },
     ]);

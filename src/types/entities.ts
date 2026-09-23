@@ -91,6 +91,13 @@ export interface RoutineItem {
   duration: number | null;
 }
 
+export interface RoutineItemLog {
+  id: string;
+  routineItemId: string;
+  date: string; // YYYY-MM-DD
+  completedAt: string;
+}
+
 export type GoalStatus = 'ACTIVE' | 'COMPLETED' | 'ABANDONED';
 
 export interface Goal {

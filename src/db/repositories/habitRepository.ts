@@ -43,6 +43,16 @@ export function listHabits(includeInactive = false): Habit[] {
   return rows.map(fromRow);
 }
 
+export function searchHabits(query: string, limit = 30): Habit[] {
+  const db = getDb();
+  const like = `%${query}%`;
+  const rows = db.getAllSync<HabitRow>(
+    'SELECT * FROM habit WHERE is_active = 1 AND (name LIKE ? OR notes LIKE ?) ORDER BY created_at ASC LIMIT ?',
+    [like, like, limit],
+  );
+  return rows.map(fromRow);
+}
+
 export function getHabit(id: string): Habit | null {
   const row = getDb().getFirstSync<HabitRow>('SELECT * FROM habit WHERE id = ?', [id]);
   return row ? fromRow(row) : null;

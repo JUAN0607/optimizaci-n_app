@@ -5,8 +5,10 @@ import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
-import { deleteGoal, listGoals, updateGoalStatus } from '@/db/repositories/goalRepository';
+import { UndoSnackbar } from '@/components/UndoSnackbar';
+import { deleteGoal, listGoals, restoreGoal, updateGoalStatus } from '@/db/repositories/goalRepository';
 import { useAppStore } from '@/hooks/useAppStore';
+import { useUndoStore } from '@/hooks/useUndoStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Goal } from '@/types/entities';
 
@@ -26,6 +28,7 @@ export default function GoalsScreen() {
   const { colors, radius, spacing, type, shadow } = useTheme();
   const dataVersion = useAppStore((s) => s.dataVersion);
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
+  const showUndo = useUndoStore((s) => s.show);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
   const goals = useMemo(() => listGoals(), [dataVersion]);
@@ -33,10 +36,23 @@ export default function GoalsScreen() {
   const confirmDelete = (goal: Goal) => {
     Alert.alert('Eliminar meta', `¿Eliminar "${goal.title}"?`, [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => {
-        deleteGoal(goal.id);
-        bumpDataVersion();
-      } },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          deleteGoal(goal.id);
+          bumpDataVersion();
+          // Deferred so the snackbar mounts after the confirmation Alert's own dismiss
+          // animation finishes — showing it immediately raced that native modal and
+          // swallowed its taps (same issue fixed for activity delete).
+          setTimeout(() => {
+            showUndo(`"${goal.title}" eliminada`, () => {
+              restoreGoal(goal);
+              bumpDataVersion();
+            });
+          }, 400);
+        },
+      },
     ]);
   };
 
@@ -98,6 +114,7 @@ export default function GoalsScreen() {
           ))
         )}
       </ScrollView>
+      <UndoSnackbar />
     </SafeAreaView>
   );
 }

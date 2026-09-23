@@ -79,6 +79,16 @@ export function listActivitiesInRange(startDate: string, endDate: string): Activ
   return rows.map(fromRow);
 }
 
+export function searchActivities(query: string, limit = 30): Activity[] {
+  const db = getDb();
+  const like = `%${query}%`;
+  const rows = db.getAllSync<ActivityRow>(
+    'SELECT * FROM activity WHERE title LIKE ? OR notes LIKE ? ORDER BY date DESC LIMIT ?',
+    [like, like, limit],
+  );
+  return rows.map(fromRow);
+}
+
 export function getActivity(id: string): Activity | null {
   const row = getDb().getFirstSync<ActivityRow>('SELECT * FROM activity WHERE id = ?', [id]);
   return row ? fromRow(row) : null;
@@ -259,4 +269,9 @@ export function rescheduleActivity(id: string, date: string, startTime: string |
 
 export function deleteActivity(id: string): void {
   getDb().runSync('DELETE FROM activity WHERE id = ?', [id]);
+}
+
+/** Re-inserts a previously-deleted activity as-is (same id) — the undo path for delete. */
+export function restoreActivity(activity: Activity): void {
+  insertActivityRow(activity);
 }

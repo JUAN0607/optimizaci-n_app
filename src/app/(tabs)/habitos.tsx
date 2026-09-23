@@ -1,12 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { calculateStreak } from '@/analytics/streaks';
 import { EmptyState } from '@/components/EmptyState';
 import { HabitCard } from '@/components/HabitCard';
+import { SegmentedControl } from '@/components/SegmentedControl';
 import { getLogForDate, listLogsForHabit, logHabit } from '@/db/repositories/habitLogRepository';
+import { listRoutineItems, listRoutines } from '@/db/repositories/routineRepository';
+import { listCompletedItemIds } from '@/db/repositories/routineLogRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useHabits } from '@/hooks/useHabits';
@@ -14,8 +18,11 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
 
+type Tab = 'habits' | 'routines';
+
 export default function HabitosScreen() {
-  const { colors, spacing, type } = useTheme();
+  const { colors, spacing, type, radius, shadow } = useTheme();
+  const [tab, setTab] = useState<Tab>('habits');
   const habits = useHabits();
   const categoryMap = useCategoryMap();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
@@ -40,28 +47,82 @@ export default function HabitosScreen() {
     bumpDataVersion();
   };
 
+  const routineRows = useMemo(() => {
+    if (tab !== 'routines') return [];
+    return listRoutines().map((routine) => {
+      const items = listRoutineItems(routine.id);
+      const completedIds = listCompletedItemIds(routine.id, today);
+      return { routine, total: items.length, completed: items.filter((i) => completedIds.has(i.id)).length };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
+  }, [tab, dataVersion, today]);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }}>
-        <Text style={[type.h1, { color: colors.textPrimary, marginBottom: spacing.xl }]}>Hábitos</Text>
+        <Text style={[type.h1, { color: colors.textPrimary, marginBottom: spacing.lg }]}>Hábitos</Text>
 
-        {rows.length === 0 ? (
-          <EmptyState title="Todavía no tienes hábitos." message="Empieza con uno pequeño." />
-        ) : (
-          <View style={{ gap: spacing.md }}>
-            {rows.map(({ habit, streak, todayLog }) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                category={habit.categoryId ? (categoryMap.get(habit.categoryId) ?? null) : null}
-                todayLog={todayLog}
-                streak={streak.current}
-                onPress={() => router.push(`/habit/${habit.id}`)}
-                onToggleComplete={() => toggleComplete(habit.id, todayLog?.status === 'COMPLETED')}
-              />
-            ))}
-          </View>
-        )}
+        <SegmentedControl
+          options={[
+            { value: 'habits', label: 'Hábitos' },
+            { value: 'routines', label: 'Rutinas' },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+
+        <View style={{ marginTop: spacing.xl }}>
+          {tab === 'habits' ? (
+            rows.length === 0 ? (
+              <EmptyState title="Todavía no tienes hábitos." message="Empieza con uno pequeño." />
+            ) : (
+              <View style={{ gap: spacing.md }}>
+                {rows.map(({ habit, streak, todayLog }) => (
+                  <HabitCard
+                    key={habit.id}
+                    habit={habit}
+                    category={habit.categoryId ? (categoryMap.get(habit.categoryId) ?? null) : null}
+                    todayLog={todayLog}
+                    streak={streak.current}
+                    onPress={() => router.push(`/habit/${habit.id}`)}
+                    onToggleComplete={() => toggleComplete(habit.id, todayLog?.status === 'COMPLETED')}
+                  />
+                ))}
+              </View>
+            )
+          ) : routineRows.length === 0 ? (
+            <EmptyState title="Todavía no tienes rutinas." message="Crea una rutina para encadenar varios pasos." />
+          ) : (
+            <View style={{ gap: spacing.md }}>
+              {routineRows.map(({ routine, total, completed }) => (
+                <Pressable
+                  key={routine.id}
+                  onPress={() => router.push(`/routine/${routine.id}`)}
+                  style={[
+                    shadow.card,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing.md,
+                      backgroundColor: colors.surface,
+                      borderRadius: radius.lg,
+                      padding: spacing.lg,
+                    },
+                  ]}
+                >
+                  <Ionicons name={routine.icon as never} size={22} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[type.bodyMedium, { color: colors.textPrimary }]}>{routine.name}</Text>
+                    <Text style={[type.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
+                      {completed} / {total} pasos hoy
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

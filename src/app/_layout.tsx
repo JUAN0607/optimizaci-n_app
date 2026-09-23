@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CreateActionSheet } from '@/components/CreateActionSheet';
+import { UndoSnackbar } from '@/components/UndoSnackbar';
 import { initDatabase } from '@/db';
 import { getSettings } from '@/db/repositories/settingsRepository';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -55,6 +56,8 @@ export default function RootLayout() {
               <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
               <Stack.Screen name="activity/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="routine/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="search" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/task" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/event" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/habit" options={{ presentation: 'modal' }} />
@@ -64,6 +67,7 @@ export default function RootLayout() {
               <Stack.Screen name="create/goal" options={{ presentation: 'modal' }} />
             </Stack>
             <CreateActionSheet />
+            <UndoSnackbar />
           </BottomSheetModalProvider>
         </ThemeProvider>
       </SafeAreaProvider>

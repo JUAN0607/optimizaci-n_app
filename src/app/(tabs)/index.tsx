@@ -87,14 +87,24 @@ export default function HoyScreen() {
             <Text style={[type.h2, { color: colors.textPrimary }]}>{greeting()}, Juan</Text>
             <Text style={[type.body, { color: colors.textSecondary, marginTop: 2 }]}>{formatTodayLabel()}</Text>
           </View>
-          <Pressable
-            onPress={() => router.push('/settings')}
-            accessibilityRole="button"
-            accessibilityLabel="Ajustes"
-            style={[styles.avatarButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}
-          >
-            <Ionicons name="person-outline" size={20} color={colors.primaryStrong} />
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <Pressable
+              onPress={() => router.push('/search')}
+              accessibilityRole="button"
+              accessibilityLabel="Buscar"
+              style={[styles.avatarButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}
+            >
+              <Ionicons name="search-outline" size={20} color={colors.primaryStrong} />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Ajustes"
+              style={[styles.avatarButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}
+            >
+              <Ionicons name="person-outline" size={20} color={colors.primaryStrong} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={[styles.summaryCard, shadow.card, { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, marginTop: spacing.xl }]}>

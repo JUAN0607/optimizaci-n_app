@@ -39,6 +39,17 @@ export function listRoutines(): Routine[] {
     .map(routineFromRow);
 }
 
+export function searchRoutines(query: string, limit = 30): Routine[] {
+  const db = getDb();
+  const like = `%${query}%`;
+  return db
+    .getAllSync<RoutineRow>('SELECT * FROM routine WHERE is_active = 1 AND name LIKE ? ORDER BY created_at ASC LIMIT ?', [
+      like,
+      limit,
+    ])
+    .map(routineFromRow);
+}
+
 export function getRoutine(id: string): Routine | null {
   const row = getDb().getFirstSync<RoutineRow>('SELECT * FROM routine WHERE id = ?', [id]);
   return row ? routineFromRow(row) : null;
@@ -69,6 +80,13 @@ export function createRoutine(input: { name: string; icon: string; items: Omit<R
     });
   });
   return routine;
+}
+
+export function updateRoutine(id: string, input: { name: string; icon?: string }): void {
+  const db = getDb();
+  const existing = getRoutine(id);
+  if (!existing) return;
+  db.runSync('UPDATE routine SET name = ?, icon = ? WHERE id = ?', [input.name, input.icon ?? existing.icon, id]);
 }
 
 export function replaceRoutineItems(routineId: string, items: Omit<RoutineItem, 'id' | 'routineId'>[]): void {

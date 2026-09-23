@@ -49,3 +49,12 @@ export function updateGoalStatus(id: string, status: Goal['status']): void {
 export function deleteGoal(id: string): void {
   getDb().runSync('DELETE FROM goal WHERE id = ?', [id]);
 }
+
+/** Re-inserts a previously-deleted goal as-is (same id) — the undo path for delete. */
+export function restoreGoal(goal: Goal): void {
+  getDb().runSync(
+    `INSERT INTO goal (id, title, target, target_unit, timeframe, start_date, end_date, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [goal.id, goal.title, goal.target, goal.targetUnit, goal.timeframe, goal.startDate, goal.endDate, goal.status, goal.createdAt],
+  );
+}

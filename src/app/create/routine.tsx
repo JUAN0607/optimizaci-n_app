@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
-import { createRoutine } from '@/db/repositories/routineRepository';
+import { createRoutine, getRoutine, listRoutineItems, replaceRoutineItems, updateRoutine } from '@/db/repositories/routineRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -15,11 +15,18 @@ interface DraftItem {
 }
 
 export default function CreateRoutineScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const existingRoutine = id ? getRoutine(id) : null;
+  const isEditing = !!existingRoutine;
+  const existingItems = existingRoutine ? listRoutineItems(existingRoutine.id) : [];
+
   const { colors, radius, spacing, type } = useTheme();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
-  const [name, setName] = useState('');
-  const [items, setItems] = useState<DraftItem[]>([{ title: '', time: '' }]);
+  const [name, setName] = useState(existingRoutine?.name ?? '');
+  const [items, setItems] = useState<DraftItem[]>(
+    existingItems.length > 0 ? existingItems.map((i) => ({ title: i.title, time: i.time ?? '' })) : [{ title: '', time: '' }],
+  );
 
   const canSave = name.trim().length > 0 && items.some((i) => i.title.trim().length > 0);
 
@@ -40,23 +47,31 @@ export default function CreateRoutineScreen() {
   const save = () => {
     if (!canSave) return;
     const validItems = items.filter((i) => i.title.trim().length > 0);
-    createRoutine({
-      name: name.trim(),
-      icon: 'sunny-outline',
-      items: validItems.map((item, index) => ({
-        title: item.title.trim(),
-        time: item.time.trim() || null,
-        order: index,
-        duration: null,
-      })),
-    });
+    const payloadItems = validItems.map((item, index) => ({
+      title: item.title.trim(),
+      time: item.time.trim() || null,
+      order: index,
+      duration: null,
+    }));
+    if (existingRoutine) {
+      updateRoutine(existingRoutine.id, { name: name.trim() });
+      replaceRoutineItems(existingRoutine.id, payloadItems);
+    } else {
+      createRoutine({ name: name.trim(), icon: 'sunny-outline', items: payloadItems });
+    }
     bumpDataVersion();
     router.back();
   };
 
   return (
-    <FormScreen title="Nueva rutina" onSave={save} saveDisabled={!canSave}>
-      <TextField label="Nombre de la rutina" value={name} onChangeText={setName} placeholder="Ej. Rutina de la mañana" autoFocus />
+    <FormScreen title={isEditing ? 'Editar rutina' : 'Nueva rutina'} onSave={save} saveDisabled={!canSave}>
+      <TextField
+        label="Nombre de la rutina"
+        value={name}
+        onChangeText={setName}
+        placeholder="Ej. Rutina de la mañana"
+        autoFocus={!isEditing}
+      />
 
       <View style={{ gap: spacing.sm }}>
         <Text style={[type.label, { color: colors.textSecondary }]}>PASOS</Text>
