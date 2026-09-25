@@ -18,9 +18,30 @@ import { useCategoryMap } from '@/hooks/useCategories';
 import { useHabits } from '@/hooks/useHabits';
 import { useUndoStore } from '@/hooks/useUndoStore';
 import { useTheme } from '@/theme/ThemeProvider';
-import { todayKey } from '@/utils/date';
+import { addDaysToKey, todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
-import { describeRecurrence, isScheduledDay } from '@/utils/recurrence';
+import { describeRecurrence, isScheduledDay, startOfWeekKey } from '@/utils/recurrence';
+import type { Habit, HabitLog } from '@/types/entities';
+
+function weekProgressForHabit(habit: Habit, logs: HabitLog[], weekStart: string, today: string) {
+  if (habit.recurrenceRule.type === 'X_TIMES_PER_WEEK') {
+    const target = habit.recurrenceRule.times;
+    const doneThisWeek = logs.filter((l) => l.status === 'COMPLETED' && l.date >= weekStart && l.date <= today).length;
+    return { due: target, done: Math.min(doneThisWeek, target) };
+  }
+  const completedDates = new Set(logs.filter((l) => l.status === 'COMPLETED').map((l) => l.date));
+  let due = 0;
+  let done = 0;
+  let cursor = weekStart;
+  while (cursor <= today) {
+    if (isScheduledDay(habit.recurrenceRule, cursor)) {
+      due += 1;
+      if (completedDates.has(cursor)) done += 1;
+    }
+    cursor = addDaysToKey(cursor, 1);
+  }
+  return { due, done };
+}
 
 type Tab = 'habits' | 'routines';
 
@@ -45,6 +66,20 @@ export default function HabitosScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [habits, dataVersion],
   );
+
+  const weekStats = useMemo(() => {
+    if (rows.length === 0) return { bestStreak: 0, weekPercent: 0 };
+    const bestStreak = Math.max(...rows.map((r) => r.streak.current));
+    const weekStart = startOfWeekKey(today);
+    let due = 0;
+    let done = 0;
+    for (const { habit, logs } of rows) {
+      const progress = weekProgressForHabit(habit, logs, weekStart, today);
+      due += progress.due;
+      done += progress.done;
+    }
+    return { bestStreak, weekPercent: due === 0 ? 0 : Math.round((done / due) * 100) };
+  }, [rows, today]);
 
   const toggleComplete = (habitId: string, alreadyCompleted: boolean, habitName: string) => {
     logHabit(habitId, today, alreadyCompleted ? 'SKIPPED' : 'COMPLETED');
@@ -78,6 +113,24 @@ export default function HabitosScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }}>
         <Text style={[type.h1, { color: colors.textPrimary, marginBottom: spacing.lg }]}>Hábitos</Text>
+
+        {rows.length > 0 && (
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+            <View
+              style={[
+                shadow.floating,
+                { flex: 1, backgroundColor: colors.primaryStrong, borderRadius: radius.lg, padding: spacing.lg },
+              ]}
+            >
+              <Text style={[type.h1, { color: colors.onPrimaryStrong }]}>{weekStats.bestStreak}</Text>
+              <Text style={[type.bodySmall, { color: colors.onPrimaryStrong, opacity: 0.8, marginTop: 2 }]}>Racha actual</Text>
+            </View>
+            <View style={[shadow.card, { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg }]}>
+              <Text style={[type.h1, { color: colors.primary }]}>{weekStats.weekPercent}%</Text>
+              <Text style={[type.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>Esta semana</Text>
+            </View>
+          </View>
+        )}
 
         <SegmentedControl
           options={[

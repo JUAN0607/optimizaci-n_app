@@ -56,6 +56,7 @@ export default function RootLayout() {
               <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
               <Stack.Screen name="activity/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="habit/stats/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="routine/[id]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="search" options={{ presentation: 'modal' }} />
               <Stack.Screen name="create/task" options={{ presentation: 'modal' }} />

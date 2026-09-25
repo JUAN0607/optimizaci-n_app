@@ -17,14 +17,19 @@ const HOUR_HEIGHT = 44;
 interface WeekViewProps {
   dateKey: string;
   onChangeDate: (dateKey: string) => void;
+  categoryFilter?: string[];
 }
 
-export function WeekView({ dateKey, onChangeDate }: WeekViewProps) {
+export function WeekView({ dateKey, onChangeDate, categoryFilter }: WeekViewProps) {
   const { colors, radius, spacing, type } = useTheme();
   const categoryMap = useCategoryMap();
   const weekStart = startOfWeekKey(dateKey);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysToKey(weekStart, i)), [weekStart]);
-  const activities = useActivitiesInRange(days[0], days[6]);
+  const allActivities = useActivitiesInRange(days[0], days[6]);
+  const activities =
+    categoryFilter && categoryFilter.length > 0
+      ? allActivities.filter((a) => a.categoryId && categoryFilter.includes(a.categoryId))
+      : allActivities;
   const today = todayKey();
 
   const columns = useMemo(

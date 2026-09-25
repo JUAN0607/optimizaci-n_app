@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { calculateCompletionRate } from '@/analytics/completion';
 import { MONTH_LABELS } from '@/constants/labels';
+import { ProgressBar } from '@/components/ProgressBar';
 import { useActivitiesInRange } from '@/hooks/useActivities';
 import { useTheme } from '@/theme/ThemeProvider';
 import { parseDateKey, toDateKey } from '@/utils/date';
@@ -33,7 +34,7 @@ export function YearView({ dateKey, onSelectMonth }: YearViewProps) {
   return (
     <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 140 }}>
       <Text style={[type.h2, { color: colors.textPrimary, marginBottom: spacing.lg }]}>{year}</Text>
-      <View style={styles.grid}>
+      <View style={{ gap: spacing.sm }}>
         {MONTH_LABELS.map((label, month) => {
           const monthKey = toDateKey(startOfMonth(new Date(year, month, 1)));
           const rate = rateByMonth[month];
@@ -42,15 +43,15 @@ export function YearView({ dateKey, onSelectMonth }: YearViewProps) {
               key={label}
               onPress={() => onSelectMonth(monthKey)}
               style={[
-                styles.tile,
                 shadow.card,
-                { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md },
+                { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs },
               ]}
             >
-              <Text style={[type.bodyMedium, { color: colors.textPrimary }]}>{label}</Text>
-              <Text style={[type.h3, { color: rate > 0 ? colors.primary : colors.textTertiary, marginTop: 4 }]}>
-                {rate}%
-              </Text>
+              <View style={styles.tileHeader}>
+                <Text style={[type.bodyMedium, { color: colors.textPrimary }]}>{label}</Text>
+                <Text style={[type.bodyMedium, { color: rate > 0 ? colors.primary : colors.textTertiary }]}>{rate}%</Text>
+              </View>
+              <ProgressBar progress={rate / 100} color={rate > 0 ? colors.primary : colors.border} />
             </Pressable>
           );
         })}
@@ -60,6 +61,5 @@ export function YearView({ dateKey, onSelectMonth }: YearViewProps) {
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tile: { width: '30%' },
+  tileHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

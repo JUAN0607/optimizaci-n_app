@@ -17,9 +17,18 @@ import { getLogForDate, listLogsForHabit, logHabit } from '@/db/repositories/hab
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
-import { describeRecurrence } from '@/utils/recurrence';
-import { todayKey } from '@/utils/date';
+import { describeRecurrence, isScheduledDay, startOfWeekKey } from '@/utils/recurrence';
+import { addDaysToKey, todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
+
+const HISTORY_WEEKS = 6;
+
+function formatDuration(totalMinutes: number): string {
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}min`;
+}
 
 export default function HabitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,6 +56,42 @@ export default function HabitDetailScreen() {
 
   const category = habit.categoryId ? (categoryMap.get(habit.categoryId) ?? null) : null;
   const totalCompleted = logs.filter((l) => l.status === 'COMPLETED').length;
+  const totalMinutes =
+    habit.measurementType === 'DURATION' ? logs.filter((l) => l.status === 'COMPLETED').reduce((sum, l) => sum + (l.value ?? 0), 0) : 0;
+
+  const completedDates = new Set(logs.filter((l) => l.status === 'COMPLETED').map((l) => l.date));
+  const weekStart = startOfWeekKey(today);
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const dateKey = addDaysToKey(weekStart, i);
+    const scheduled = habit.recurrenceRule.type === 'X_TIMES_PER_WEEK' || isScheduledDay(habit.recurrenceRule, dateKey);
+    return {
+      dateKey,
+      scheduled,
+      completed: completedDates.has(dateKey),
+      isToday: dateKey === today,
+      isFuture: dateKey > today,
+    };
+  });
+
+  const weeklyHistory = Array.from({ length: HISTORY_WEEKS }, (_, i) => {
+    const wStart = addDaysToKey(weekStart, -7 * (HISTORY_WEEKS - 1 - i));
+    const wEnd = addDaysToKey(wStart, 6);
+    if (habit.recurrenceRule.type === 'X_TIMES_PER_WEEK') {
+      const done = logs.filter((l) => l.status === 'COMPLETED' && l.date >= wStart && l.date <= wEnd).length;
+      return { weekStart: wStart, done: Math.min(done, habit.recurrenceRule.times), due: habit.recurrenceRule.times };
+    }
+    let due = 0;
+    let done = 0;
+    let cursor = wStart;
+    while (cursor <= wEnd && cursor <= today) {
+      if (isScheduledDay(habit.recurrenceRule, cursor)) {
+        due += 1;
+        if (completedDates.has(cursor)) done += 1;
+      }
+      cursor = addDaysToKey(cursor, 1);
+    }
+    return { weekStart: wStart, done, due };
+  });
 
   const completeToday = () => {
     if (habit.measurementType === 'CHECKBOX') {
@@ -99,7 +144,7 @@ export default function HabitDetailScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: spacing.xl * 2, gap: spacing.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
             <IconEmoji icon={habit.icon} size={24} color={colors.primary} />
@@ -117,7 +162,45 @@ export default function HabitDetailScreen() {
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <MetricCard label="Racha actual" value={String(streak.current)} accentColor={colors.accentGold} />
           <MetricCard label="Mejor racha" value={String(streak.longest)} />
-          <MetricCard label="Total" value={String(totalCompleted)} />
+          <MetricCard label="Sesiones" value={String(totalCompleted)} />
+        </View>
+
+        {habit.measurementType === 'DURATION' && (
+          <View style={{ flexDirection: 'row' }}>
+            <MetricCard label="Tiempo total" value={formatDuration(totalMinutes)} accentColor={category?.color} />
+          </View>
+        )}
+
+        <View>
+          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>ESTA SEMANA</Text>
+          <View style={[styles.weekRow, shadow.card, { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md }]}>
+            {weekDays.map((d, i) => {
+              const dot = d.completed
+                ? colors.success
+                : d.isFuture || !d.scheduled
+                  ? colors.surfaceAlt
+                  : colors.statusOverdue;
+              return (
+                <View key={d.dateKey} style={styles.weekDayCell}>
+                  <Text style={[type.caption, { color: colors.textTertiary }]}>{WEEKDAY_LABELS_SHORT[i]}</Text>
+                  <View
+                    style={[
+                      styles.weekDot,
+                      {
+                        backgroundColor: d.completed ? dot : 'transparent',
+                        borderColor: dot,
+                        borderWidth: d.completed ? 0 : d.scheduled && !d.isFuture ? 1.5 : 1,
+                        opacity: d.isToday ? 1 : d.scheduled ? 0.85 : 0.4,
+                      },
+                    ]}
+                  >
+                    {d.completed && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
+                  </View>
+                  {d.isToday && <View style={[styles.todayMark, { backgroundColor: colors.primary }]} />}
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         <View style={[styles.card, shadow.card, { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg }]}>
@@ -161,6 +244,41 @@ export default function HabitDetailScreen() {
           <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>CONSISTENCIA</Text>
           <HabitHeatmap habit={habit} logs={logs} color={category?.color ?? colors.success} />
         </View>
+
+        <View>
+          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>HISTORIAL SEMANAL</Text>
+          <View style={{ gap: spacing.xs }}>
+            {weeklyHistory.map(({ weekStart, done, due }) => {
+              const weekEnd = addDaysToKey(weekStart, 6);
+              const start = new Date(weekStart);
+              const end = new Date(weekEnd);
+              return (
+                <View
+                  key={weekStart}
+                  style={[
+                    styles.historyRow,
+                    { backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md },
+                  ]}
+                >
+                  <Text style={[type.bodySmall, { color: colors.textSecondary }]}>
+                    {start.getDate()} — {end.getDate()} {end.toLocaleDateString('es-CO', { month: 'short' })}
+                  </Text>
+                  <Text style={[type.bodySmall, { color: due > 0 && done === due ? colors.success : colors.textPrimary }]}>
+                    {done}/{due}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => router.push(`/habit/stats/${habit.id}`)}
+          style={[styles.statsButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.md }]}
+        >
+          <Ionicons name="stats-chart-outline" size={18} color={colors.primary} />
+          <Text style={[type.bodyMedium, { color: colors.primary }]}>Ver todas las estadísticas</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -171,4 +289,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   card: {},
   registerButton: { paddingHorizontal: 16, paddingVertical: 12 },
+  weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  weekDayCell: { alignItems: 'center', gap: 6 },
+  weekDot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  todayMark: { width: 4, height: 4, borderRadius: 2 },
+  historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  statsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
 });

@@ -4,10 +4,10 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ActivityCard } from '@/components/ActivityCard';
 import { EmptyState } from '@/components/EmptyState';
 import { MetricCard } from '@/components/MetricCard';
 import { ProgressBar } from '@/components/ProgressBar';
+import { TimelineActivityRow } from '@/components/TimelineActivityRow';
 import { setActivityStatus } from '@/db/repositories/activityRepository';
 import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -152,17 +152,18 @@ export default function HoyScreen() {
         )}
 
         <View style={{ marginTop: spacing.xl }}>
-          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>TU DÍA</Text>
+          <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>TU AGENDA</Text>
 
           {activities.length === 0 ? (
             <EmptyState title="Tu día está libre." message="Planifica algo nuevo o disfruta el espacio." />
           ) : (
-            <View style={{ gap: spacing.md }}>
-              {activities.map((activity) => (
-                <ActivityCard
+            <View>
+              {activities.map((activity, index) => (
+                <TimelineActivityRow
                   key={activity.id}
                   activity={activity}
                   category={activity.categoryId ? (categoryMap.get(activity.categoryId) ?? null) : null}
+                  isLast={index === activities.length - 1}
                   onPress={() => router.push(`/activity/${activity.id}`)}
                   onToggleComplete={() => toggleComplete(activity.id, activity.status, activity.title)}
                 />

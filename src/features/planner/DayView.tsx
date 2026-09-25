@@ -17,11 +17,16 @@ const HOUR_HEIGHT = 64;
 interface DayViewProps {
   dateKey: string;
   onChangeDate: (dateKey: string) => void;
+  categoryFilter?: string[];
 }
 
-function DayPage({ dateKey, width }: { dateKey: string; width: number }) {
+function DayPage({ dateKey, width, categoryFilter }: { dateKey: string; width: number; categoryFilter?: string[] }) {
   const { colors, spacing, type } = useTheme();
-  const activities = useActivitiesForDate(dateKey);
+  const allActivities = useActivitiesForDate(dateKey);
+  const activities =
+    categoryFilter && categoryFilter.length > 0
+      ? allActivities.filter((a) => a.categoryId && categoryFilter.includes(a.categoryId))
+      : allActivities;
   const categoryMap = useCategoryMap();
   const untimed = activities.filter((a) => !a.startTime);
 
@@ -72,7 +77,7 @@ function DayPage({ dateKey, width }: { dateKey: string; width: number }) {
   );
 }
 
-export function DayView({ dateKey, onChangeDate }: DayViewProps) {
+export function DayView({ dateKey, onChangeDate, categoryFilter }: DayViewProps) {
   const { colors, spacing, type } = useTheme();
   const { width } = useWindowDimensions();
   const hScrollRef = useRef<ScrollView>(null);
@@ -121,7 +126,7 @@ export function DayView({ dateKey, onChangeDate }: DayViewProps) {
         key={centerDate}
       >
         {pages.map((d) => (
-          <DayPage key={d} dateKey={d} width={width} />
+          <DayPage key={d} dateKey={d} width={width} categoryFilter={categoryFilter} />
         ))}
       </ScrollView>
     </View>
