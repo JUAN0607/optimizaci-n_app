@@ -2,8 +2,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 
+import { EmojiPicker } from '@/components/EmojiPicker';
 import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
+import { suggestEmoji } from '@/constants/emojis';
 import { createCategory, getCategory, updateCategory } from '@/db/repositories/categoryRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { palette } from '@/theme/colors';
@@ -29,15 +31,18 @@ export default function CreateCategoryScreen() {
   const [name, setName] = useState(existing?.name ?? '');
   const [color, setColor] = useState(existing?.color ?? COLOR_OPTIONS[0]);
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
+  const [manualIcon, setManualIcon] = useState<string | null>(existing?.icon ?? null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const icon = manualIcon ?? suggestEmoji(name, null);
 
   const canSave = name.trim().length > 0;
 
   const save = () => {
     if (!canSave) return;
     if (existing) {
-      updateCategory(existing.id, { name: name.trim(), color, isActive });
+      updateCategory(existing.id, { name: name.trim(), icon, color, isActive });
     } else {
-      createCategory({ name: name.trim(), icon: 'circle', color });
+      createCategory({ name: name.trim(), icon, color });
     }
     bumpDataVersion();
     router.back();
@@ -45,6 +50,46 @@ export default function CreateCategoryScreen() {
 
   return (
     <FormScreen title={isEditing ? 'Editar categoría' : 'Nueva categoría'} onSave={save} saveDisabled={!canSave}>
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[type.label, { color: colors.textSecondary }]}>ÍCONO</Text>
+        <Pressable
+          onPress={() => setShowEmojiPicker((v) => !v)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            alignSelf: 'flex-start',
+            backgroundColor: colors.surfaceAlt,
+            borderRadius: radius.md,
+            padding: spacing.xs,
+            paddingRight: spacing.md,
+          }}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>{icon}</Text>
+          </View>
+          <Text style={[type.bodySmall, { color: colors.primary }]}>{showEmojiPicker ? 'Cerrar' : 'Cambiar emoji'}</Text>
+        </Pressable>
+        {showEmojiPicker && (
+          <EmojiPicker
+            value={icon}
+            onChange={(emoji) => {
+              setManualIcon(emoji);
+              setShowEmojiPicker(false);
+            }}
+          />
+        )}
+      </View>
+
       <TextField label="Nombre" value={name} onChangeText={setName} placeholder="Ej. Finanzas" autoFocus={!isEditing} />
 
       <View style={{ gap: spacing.xs }}>

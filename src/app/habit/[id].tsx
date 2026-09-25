@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { CompletionToggle } from '@/components/CompletionToggle';
 import { HabitHeatmap } from '@/components/HabitHeatmap';
+import { IconEmoji } from '@/components/IconEmoji';
 import { MetricCard } from '@/components/MetricCard';
 import { TextField } from '@/components/TextField';
 import { calculateStreak } from '@/analytics/streaks';
@@ -101,7 +102,7 @@ export default function HabitDetailScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name={habit.icon as never} size={24} color={colors.primary} />
+            <IconEmoji icon={habit.icon} size={24} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[type.h2, { color: colors.textPrimary }]}>{habit.name}</Text>

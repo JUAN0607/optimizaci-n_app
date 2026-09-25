@@ -143,6 +143,36 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       `);
     },
   },
+  {
+    version: 4,
+    up: (db) => {
+      // Lets a routine run only on certain days (e.g. weekdays only), reusing the same
+      // RecurrenceRule shape as habits/activities. NULL means "every day" (prior behavior).
+      db.execSync(`ALTER TABLE routine ADD COLUMN recurrence_rule TEXT;`);
+    },
+  },
+  {
+    version: 5,
+    up: (db) => {
+      // The default categories were seeded with Ionicons names that never matched a real
+      // glyph (CategoryBadge never rendered icons until the emoji system existed). Fix
+      // already-seeded installs to the same emoji DEFAULT_CATEGORIES now uses.
+      const fixes: [string, string][] = [
+        ['Universidad', '🎓'],
+        ['Trabajo', '💼'],
+        ['Salud', '🧘'],
+        ['Personal', '🏠'],
+        ['Hogar', '🏡'],
+        ['Proyectos', '📁'],
+      ];
+      for (const [name, emoji] of fixes) {
+        db.runSync(
+          `UPDATE category SET icon = ? WHERE name = ? AND icon IN ('graduation-cap', 'briefcase', 'heart-pulse', 'user', 'home', 'rocket', 'circle')`,
+          [emoji, name],
+        );
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

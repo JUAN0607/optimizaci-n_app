@@ -5,6 +5,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CompletionToggle } from '@/components/CompletionToggle';
+import { IconEmoji } from '@/components/IconEmoji';
 import { ProgressBar } from '@/components/ProgressBar';
 import { deleteRoutine, getRoutine, listRoutineItems } from '@/db/repositories/routineRepository';
 import { listCompletedItemIds, setItemCompleted } from '@/db/repositories/routineLogRepository';
@@ -93,7 +94,7 @@ export default function RoutineDetailScreen() {
               justifyContent: 'center',
             }}
           >
-            <Ionicons name={routine.icon as never} size={24} color={colors.primary} />
+            <IconEmoji icon={routine.icon} size={24} color={colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[type.h2, { color: colors.textPrimary }]}>{routine.name}</Text>

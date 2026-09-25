@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { EmptyState } from '@/components/EmptyState';
+import { IconEmoji } from '@/components/IconEmoji';
 import { ACTIVITY_TYPE_LABELS } from '@/constants/labels';
 import { searchActivities } from '@/db/repositories/activityRepository';
 import { searchHabits } from '@/db/repositories/habitRepository';
@@ -138,7 +139,7 @@ export default function SearchScreen() {
                       },
                     ]}
                   >
-                    <Ionicons name={habit.icon as never} size={20} color={colors.primary} />
+                    <IconEmoji icon={habit.icon} size={20} color={colors.primary} />
                     <Text style={[type.bodyMedium, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
                       {habit.name}
                     </Text>
@@ -165,7 +166,7 @@ export default function SearchScreen() {
                       },
                     ]}
                   >
-                    <Ionicons name={routine.icon as never} size={20} color={colors.primary} />
+                    <IconEmoji icon={routine.icon} size={20} color={colors.primary} />
                     <Text style={[type.bodyMedium, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
                       {routine.name}
                     </Text>

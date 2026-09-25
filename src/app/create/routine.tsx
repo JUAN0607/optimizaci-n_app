@@ -3,8 +3,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { EmojiPicker } from '@/components/EmojiPicker';
+import { buildRecurrenceRule, deriveFrequencyState, FrequencyPicker } from '@/components/FrequencyPicker';
 import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
+import { suggestEmoji } from '@/constants/emojis';
 import { createRoutine, getRoutine, listRoutineItems, replaceRoutineItems, updateRoutine } from '@/db/repositories/routineRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -24,6 +27,10 @@ export default function CreateRoutineScreen() {
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
   const [name, setName] = useState(existingRoutine?.name ?? '');
+  const [manualIcon, setManualIcon] = useState<string | null>(existingRoutine?.icon ?? null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const icon = manualIcon ?? suggestEmoji(name, null);
+  const [frequency, setFrequency] = useState(() => deriveFrequencyState(existingRoutine?.recurrenceRule));
   const [items, setItems] = useState<DraftItem[]>(
     existingItems.length > 0 ? existingItems.map((i) => ({ title: i.title, time: i.time ?? '' })) : [{ title: '', time: '' }],
   );
@@ -53,11 +60,12 @@ export default function CreateRoutineScreen() {
       order: index,
       duration: null,
     }));
+    const recurrenceRule = frequency.frequencyType === 'DAILY' ? null : buildRecurrenceRule(frequency);
     if (existingRoutine) {
-      updateRoutine(existingRoutine.id, { name: name.trim() });
+      updateRoutine(existingRoutine.id, { name: name.trim(), icon, recurrenceRule });
       replaceRoutineItems(existingRoutine.id, payloadItems);
     } else {
-      createRoutine({ name: name.trim(), icon: 'sunny-outline', items: payloadItems });
+      createRoutine({ name: name.trim(), icon, recurrenceRule, items: payloadItems });
     }
     bumpDataVersion();
     router.back();
@@ -65,6 +73,46 @@ export default function CreateRoutineScreen() {
 
   return (
     <FormScreen title={isEditing ? 'Editar rutina' : 'Nueva rutina'} onSave={save} saveDisabled={!canSave}>
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[type.label, { color: colors.textSecondary }]}>ÍCONO</Text>
+        <Pressable
+          onPress={() => setShowEmojiPicker((v) => !v)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+            alignSelf: 'flex-start',
+            backgroundColor: colors.surfaceAlt,
+            borderRadius: radius.md,
+            padding: spacing.xs,
+            paddingRight: spacing.md,
+          }}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Text style={{ fontSize: 22 }}>{icon}</Text>
+          </View>
+          <Text style={[type.bodySmall, { color: colors.primary }]}>{showEmojiPicker ? 'Cerrar' : 'Cambiar emoji'}</Text>
+        </Pressable>
+        {showEmojiPicker && (
+          <EmojiPicker
+            value={icon}
+            onChange={(emoji) => {
+              setManualIcon(emoji);
+              setShowEmojiPicker(false);
+            }}
+          />
+        )}
+      </View>
+
       <TextField
         label="Nombre de la rutina"
         value={name}
@@ -72,6 +120,8 @@ export default function CreateRoutineScreen() {
         placeholder="Ej. Rutina de la mañana"
         autoFocus={!isEditing}
       />
+
+      <FrequencyPicker state={frequency} onChange={setFrequency} />
 
       <View style={{ gap: spacing.sm }}>
         <Text style={[type.label, { color: colors.textSecondary }]}>PASOS</Text>

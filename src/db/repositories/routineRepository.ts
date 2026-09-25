@@ -1,10 +1,11 @@
 import { getDb, newId, nowIso } from '@/db/client';
-import type { Routine, RoutineItem } from '@/types/entities';
+import type { RecurrenceRule, Routine, RoutineItem } from '@/types/entities';
 
 interface RoutineRow {
   id: string;
   name: string;
   icon: string;
+  recurrence_rule: string | null;
   is_active: number;
   created_at: string;
 }
@@ -19,7 +20,14 @@ interface RoutineItemRow {
 }
 
 function routineFromRow(row: RoutineRow): Routine {
-  return { id: row.id, name: row.name, icon: row.icon, isActive: row.is_active === 1, createdAt: row.created_at };
+  return {
+    id: row.id,
+    name: row.name,
+    icon: row.icon,
+    recurrenceRule: row.recurrence_rule ? (JSON.parse(row.recurrence_rule) as RecurrenceRule) : null,
+    isActive: row.is_active === 1,
+    createdAt: row.created_at,
+  };
 }
 
 function itemFromRow(row: RoutineItemRow): RoutineItem {
@@ -61,14 +69,27 @@ export function listRoutineItems(routineId: string): RoutineItem[] {
     .map(itemFromRow);
 }
 
-export function createRoutine(input: { name: string; icon: string; items: Omit<RoutineItem, 'id' | 'routineId'>[] }): Routine {
+export function createRoutine(input: {
+  name: string;
+  icon: string;
+  recurrenceRule?: RecurrenceRule | null;
+  items: Omit<RoutineItem, 'id' | 'routineId'>[];
+}): Routine {
   const db = getDb();
-  const routine: Routine = { id: newId(), name: input.name, icon: input.icon, isActive: true, createdAt: nowIso() };
+  const routine: Routine = {
+    id: newId(),
+    name: input.name,
+    icon: input.icon,
+    recurrenceRule: input.recurrenceRule ?? null,
+    isActive: true,
+    createdAt: nowIso(),
+  };
   db.withTransactionSync(() => {
-    db.runSync('INSERT INTO routine (id, name, icon, is_active, created_at) VALUES (?, ?, ?, ?, ?)', [
+    db.runSync('INSERT INTO routine (id, name, icon, recurrence_rule, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?)', [
       routine.id,
       routine.name,
       routine.icon,
+      routine.recurrenceRule ? JSON.stringify(routine.recurrenceRule) : null,
       1,
       routine.createdAt,
     ]);
@@ -82,11 +103,17 @@ export function createRoutine(input: { name: string; icon: string; items: Omit<R
   return routine;
 }
 
-export function updateRoutine(id: string, input: { name: string; icon?: string }): void {
+export function updateRoutine(id: string, input: { name: string; icon?: string; recurrenceRule?: RecurrenceRule | null }): void {
   const db = getDb();
   const existing = getRoutine(id);
   if (!existing) return;
-  db.runSync('UPDATE routine SET name = ?, icon = ? WHERE id = ?', [input.name, input.icon ?? existing.icon, id]);
+  const recurrenceRule = input.recurrenceRule !== undefined ? input.recurrenceRule : existing.recurrenceRule;
+  db.runSync('UPDATE routine SET name = ?, icon = ?, recurrence_rule = ? WHERE id = ?', [
+    input.name,
+    input.icon ?? existing.icon,
+    recurrenceRule ? JSON.stringify(recurrenceRule) : null,
+    id,
+  ]);
 }
 
 export function replaceRoutineItems(routineId: string, items: Omit<RoutineItem, 'id' | 'routineId'>[]): void {

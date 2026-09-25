@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { isIoniconsName } from '@/constants/emojis';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Category } from '@/types/entities';
 
@@ -10,6 +11,8 @@ interface CategoryBadgeProps {
 export function CategoryBadge({ category }: CategoryBadgeProps) {
   const { colors, radius, spacing, type } = useTheme();
   if (!category) return null;
+
+  const showEmoji = !isIoniconsName(category.icon);
 
   return (
     <View
@@ -23,7 +26,7 @@ export function CategoryBadge({ category }: CategoryBadgeProps) {
         },
       ]}
     >
-      <View style={[styles.dot, { backgroundColor: category.color }]} />
+      {showEmoji ? <Text style={{ fontSize: 11 }}>{category.icon}</Text> : <View style={[styles.dot, { backgroundColor: category.color }]} />}
       <Text style={[type.caption, { color: colors.textSecondary }]} numberOfLines={1}>
         {category.name}
       </Text>

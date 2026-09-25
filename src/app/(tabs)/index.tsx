@@ -12,6 +12,7 @@ import { setActivityStatus } from '@/db/repositories/activityRepository';
 import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
+import { useUndoStore } from '@/hooks/useUndoStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import { hapticComplete } from '@/utils/haptics';
 import { MONTH_LABELS, WEEKDAY_LABELS_LONG } from '@/constants/labels';
@@ -47,6 +48,7 @@ export default function HoyScreen() {
   const categoryMap = useCategoryMap();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
   const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
+  const showUndo = useUndoStore((s) => s.show);
 
   const { completed, total, pending, current } = useMemo(() => {
     const completedCount = activities.filter((a) => a.status === 'COMPLETED').length;
@@ -66,11 +68,17 @@ export default function HoyScreen() {
 
   const completionRate = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-  const toggleComplete = (id: string, status: string) => {
+  const toggleComplete = (id: string, status: string, title: string) => {
     const nextStatus = status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     setActivityStatus(id, nextStatus);
-    if (nextStatus === 'COMPLETED') hapticComplete();
     bumpDataVersion();
+    if (nextStatus === 'COMPLETED') {
+      hapticComplete();
+      showUndo(`"${title}" completada`, () => {
+        setActivityStatus(id, 'PENDING');
+        bumpDataVersion();
+      });
+    }
   };
 
   // Expo Router resolves "/" (this screen) on cold launch regardless of Stack's
@@ -156,7 +164,7 @@ export default function HoyScreen() {
                   activity={activity}
                   category={activity.categoryId ? (categoryMap.get(activity.categoryId) ?? null) : null}
                   onPress={() => router.push(`/activity/${activity.id}`)}
-                  onToggleComplete={() => toggleComplete(activity.id, activity.status)}
+                  onToggleComplete={() => toggleComplete(activity.id, activity.status, activity.title)}
                 />
               ))}
             </View>

@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
@@ -7,6 +6,7 @@ import type { Category, Habit, HabitLog } from '@/types/entities';
 import { describeRecurrence } from '@/utils/recurrence';
 
 import { CompletionToggle } from './CompletionToggle';
+import { IconEmoji } from './IconEmoji';
 import { StreakIndicator } from './StreakIndicator';
 
 interface HabitCardProps {
@@ -32,7 +32,7 @@ export function HabitCard({ habit, category, todayLog, streak, onPress, onToggle
       ]}
     >
       <View style={[styles.iconWrap, { backgroundColor: category ? `${category.color}1F` : colors.surfaceAlt, borderRadius: radius.md }]}>
-        <Ionicons name={habit.icon as never} size={20} color={category?.color ?? colors.primary} />
+        <IconEmoji icon={habit.icon} size={20} color={category?.color ?? colors.primary} />
       </View>
 
       <View style={styles.body}>

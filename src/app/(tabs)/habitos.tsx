@@ -7,16 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { calculateStreak } from '@/analytics/streaks';
 import { EmptyState } from '@/components/EmptyState';
 import { HabitCard } from '@/components/HabitCard';
+import { IconEmoji } from '@/components/IconEmoji';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
 import { getLogForDate, listLogsForHabit, logHabit } from '@/db/repositories/habitLogRepository';
 import { listRoutineItems, listRoutines } from '@/db/repositories/routineRepository';
 import { listCompletedItemIds } from '@/db/repositories/routineLogRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useHabits } from '@/hooks/useHabits';
+import { useUndoStore } from '@/hooks/useUndoStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import { todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
+import { describeRecurrence, isScheduledDay } from '@/utils/recurrence';
 
 type Tab = 'habits' | 'routines';
 
@@ -27,6 +31,7 @@ export default function HabitosScreen() {
   const categoryMap = useCategoryMap();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
   const dataVersion = useAppStore((s) => s.dataVersion);
+  const showUndo = useUndoStore((s) => s.show);
   const today = todayKey();
 
   const rows = useMemo(
@@ -41,10 +46,16 @@ export default function HabitosScreen() {
     [habits, dataVersion],
   );
 
-  const toggleComplete = (habitId: string, alreadyCompleted: boolean) => {
+  const toggleComplete = (habitId: string, alreadyCompleted: boolean, habitName: string) => {
     logHabit(habitId, today, alreadyCompleted ? 'SKIPPED' : 'COMPLETED');
-    if (!alreadyCompleted) hapticComplete();
     bumpDataVersion();
+    if (!alreadyCompleted) {
+      hapticComplete();
+      showUndo(`"${habitName}" completado`, () => {
+        logHabit(habitId, today, 'SKIPPED');
+        bumpDataVersion();
+      });
+    }
   };
 
   const routineRows = useMemo(() => {
@@ -52,7 +63,13 @@ export default function HabitosScreen() {
     return listRoutines().map((routine) => {
       const items = listRoutineItems(routine.id);
       const completedIds = listCompletedItemIds(routine.id, today);
-      return { routine, total: items.length, completed: items.filter((i) => completedIds.has(i.id)).length };
+      const scheduledToday = !routine.recurrenceRule || isScheduledDay(routine.recurrenceRule, today);
+      return {
+        routine,
+        total: items.length,
+        completed: items.filter((i) => completedIds.has(i.id)).length,
+        scheduledToday,
+      };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
   }, [tab, dataVersion, today]);
@@ -85,7 +102,7 @@ export default function HabitosScreen() {
                     todayLog={todayLog}
                     streak={streak.current}
                     onPress={() => router.push(`/habit/${habit.id}`)}
-                    onToggleComplete={() => toggleComplete(habit.id, todayLog?.status === 'COMPLETED')}
+                    onToggleComplete={() => toggleComplete(habit.id, todayLog?.status === 'COMPLETED', habit.name)}
                   />
                 ))}
               </View>
@@ -94,7 +111,7 @@ export default function HabitosScreen() {
             <EmptyState title="Todavía no tienes rutinas." message="Crea una rutina para encadenar varios pasos." />
           ) : (
             <View style={{ gap: spacing.md }}>
-              {routineRows.map(({ routine, total, completed }) => (
+              {routineRows.map(({ routine, total, completed, scheduledToday }) => (
                 <Pressable
                   key={routine.id}
                   onPress={() => router.push(`/routine/${routine.id}`)}
@@ -107,14 +124,16 @@ export default function HabitosScreen() {
                       backgroundColor: colors.surface,
                       borderRadius: radius.lg,
                       padding: spacing.lg,
+                      opacity: scheduledToday ? 1 : 0.6,
                     },
                   ]}
                 >
-                  <Ionicons name={routine.icon as never} size={22} color={colors.primary} />
+                  <IconEmoji icon={routine.icon} size={22} color={colors.primary} />
                   <View style={{ flex: 1 }}>
                     <Text style={[type.bodyMedium, { color: colors.textPrimary }]}>{routine.name}</Text>
                     <Text style={[type.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>
-                      {completed} / {total} pasos hoy
+                      {routine.recurrenceRule ? describeRecurrence(routine.recurrenceRule, WEEKDAY_LABELS_SHORT) : 'Todos los días'}
+                      {scheduledToday ? ` · ${completed} / ${total} pasos hoy` : ' · no programada hoy'}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
