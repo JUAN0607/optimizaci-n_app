@@ -42,6 +42,21 @@ export default function ProgresoScreen() {
   const highPriorityCompleted = highPriority.filter((a) => a.status === 'COMPLETED').length;
   const categoryBreakdown = calculateCategoryBreakdown(activities);
 
+  const bestCategory = useMemo(() => {
+    let best: { name: string; rate: number } | null = null;
+    for (const entry of categoryBreakdown) {
+      if (entry.total === 0) continue;
+      const category = categories.find((c) => c.id === entry.categoryId);
+      if (!category) continue;
+      const rate = entry.completed / entry.total;
+      if (!best || rate > best.rate) best = { name: category.name, rate };
+    }
+    return best;
+  }, [categoryBreakdown, categories]);
+
+  const periodLabel = period === 'WEEK' ? 'Tu semana' : period === 'MONTH' ? 'Tu mes' : 'Tu año';
+  const completedHours = Math.round(timeMetrics.completedMinutes / 60);
+
   const habitsWithStreak = useMemo(
     () => habits.map((h) => ({ habit: h, streak: calculateStreak(h, listLogsForHabit(h.id)) })),
     [habits],
@@ -118,6 +133,18 @@ export default function ProgresoScreen() {
                   </View>
                 );
               })}
+            </View>
+
+            <View style={[shadow.card, { backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, padding: spacing.lg }]}>
+              <Text style={[type.label, { color: colors.textSecondary, marginBottom: spacing.sm }]}>{periodLabel.toUpperCase()}</Text>
+              <Text style={[type.bodyLarge, { color: colors.textPrimary, fontWeight: '500' }]}>
+                Completaste el {completionRate}% de tus actividades.
+              </Text>
+              <Text style={[type.body, { color: colors.textSecondary, marginTop: spacing.sm }]}>
+                {bestCategory
+                  ? `Tu mayor constancia estuvo en ${bestCategory.name}. Registraste ${completedHours} hora${completedHours === 1 ? '' : 's'} de actividades.`
+                  : `Registraste ${completedHours} hora${completedHours === 1 ? '' : 's'} de actividades.`}
+              </Text>
             </View>
           </>
         )}

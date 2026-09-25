@@ -1,16 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FilterChip } from '@/components/FilterChip';
+import { EMPTY_PLAN_FILTERS, PlanFilterModal, countActiveFilters, type PlanFilters } from '@/components/PlanFilterModal';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { DayView } from '@/features/planner/DayView';
 import { MonthView } from '@/features/planner/MonthView';
 import { WeekView } from '@/features/planner/WeekView';
 import { YearView } from '@/features/planner/YearView';
-import { useCategories } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import { todayKey } from '@/utils/date';
 
@@ -21,8 +20,8 @@ export default function PlanScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('DAY');
   const [dateKey, setDateKey] = useState(todayKey());
   const [showFilters, setShowFilters] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const categories = useCategories();
+  const [filters, setFilters] = useState<PlanFilters>(EMPTY_PLAN_FILTERS);
+  const activeFilterCount = countActiveFilters(filters);
 
   const selectDateAndGoToDay = (key: string) => {
     setDateKey(key);
@@ -32,10 +31,6 @@ export default function PlanScreen() {
   const selectMonthAndGoToMonth = (key: string) => {
     setDateKey(key);
     setViewMode('MONTH');
-  };
-
-  const toggleCategory = (id: string) => {
-    setCategoryFilter((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
   return (
@@ -67,7 +62,7 @@ export default function PlanScreen() {
             <Ionicons name="search-outline" size={20} color={colors.primaryStrong} />
           </Pressable>
           <Pressable
-            onPress={() => setShowFilters((v) => !v)}
+            onPress={() => setShowFilters(true)}
             accessibilityRole="button"
             accessibilityLabel="Filtros"
             style={{
@@ -75,26 +70,32 @@ export default function PlanScreen() {
               height: 40,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: categoryFilter.length > 0 ? colors.primary : colors.surfaceAlt,
+              backgroundColor: activeFilterCount > 0 ? colors.primaryStrong : colors.surfaceAlt,
               borderRadius: 20,
             }}
           >
-            <Ionicons name="options-outline" size={20} color={categoryFilter.length > 0 ? colors.onPrimary : colors.primaryStrong} />
+            <Ionicons name="options-outline" size={20} color={activeFilterCount > 0 ? colors.onPrimaryStrong : colors.primaryStrong} />
+            {activeFilterCount > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -2,
+                  right: -2,
+                  minWidth: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  paddingHorizontal: 3,
+                  backgroundColor: colors.accentGold,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: '700' }}>{activeFilterCount}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
-
-      {showFilters && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md, gap: spacing.sm }}
-        >
-          {categories.map((c) => (
-            <FilterChip key={c.id} label={c.name} selected={categoryFilter.includes(c.id)} onPress={() => toggleCategory(c.id)} color={c.color} />
-          ))}
-        </ScrollView>
-      )}
 
       <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.md }}>
         <SegmentedControl
@@ -109,10 +110,19 @@ export default function PlanScreen() {
         />
       </View>
 
-      {viewMode === 'DAY' && <DayView dateKey={dateKey} onChangeDate={setDateKey} categoryFilter={categoryFilter} />}
-      {viewMode === 'WEEK' && <WeekView dateKey={dateKey} onChangeDate={setDateKey} categoryFilter={categoryFilter} />}
+      {viewMode === 'DAY' && <DayView dateKey={dateKey} onChangeDate={setDateKey} filters={filters} />}
+      {viewMode === 'WEEK' && <WeekView dateKey={dateKey} onChangeDate={setDateKey} filters={filters} />}
       {viewMode === 'MONTH' && <MonthView dateKey={dateKey} onSelectDate={selectDateAndGoToDay} />}
       {viewMode === 'YEAR' && <YearView dateKey={dateKey} onSelectMonth={selectMonthAndGoToMonth} />}
+
+      <PlanFilterModal
+        visible={showFilters}
+        filters={filters}
+        onApply={setFilters}
+        onClose={() => setShowFilters(false)}
+        dateKey={dateKey}
+        onChangeDate={setDateKey}
+      />
     </SafeAreaView>
   );
 }

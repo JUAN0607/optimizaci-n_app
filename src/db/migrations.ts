@@ -173,6 +173,26 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       }
     },
   },
+  {
+    version: 6,
+    up: (db) => {
+      // Same fix as v5, but for the sample habits seeded before the emoji system existed
+      // (they had real Ionicons names, so IconEmoji was already rendering them correctly —
+      // this just brings them in line with the all-emoji look everywhere else).
+      const fixes: [string, string][] = [
+        ['Meditar', '🧘'],
+        ['Beber agua', '💧'],
+        ['Leer 30 minutos', '📖'],
+        ['Correr 5 km', '🏃'],
+      ];
+      for (const [name, emoji] of fixes) {
+        db.runSync(
+          `UPDATE habit SET icon = ? WHERE name = ? AND icon IN ('flower-outline', 'water-outline', 'book', 'walk-outline')`,
+          [emoji, name],
+        );
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

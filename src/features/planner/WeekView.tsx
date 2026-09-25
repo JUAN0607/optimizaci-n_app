@@ -3,11 +3,13 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { PlanFilters } from '@/components/PlanFilterModal';
 import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
 import { useActivitiesInRange } from '@/hooks/useActivities';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import { addDaysToKey, parseDateKey, todayKey } from '@/utils/date';
+import { applyPlanFilters } from '@/utils/planFilters';
 import { startOfWeekKey } from '@/utils/recurrence';
 
 import { TimeGrid } from './TimeGrid';
@@ -17,19 +19,16 @@ const HOUR_HEIGHT = 44;
 interface WeekViewProps {
   dateKey: string;
   onChangeDate: (dateKey: string) => void;
-  categoryFilter?: string[];
+  filters?: PlanFilters;
 }
 
-export function WeekView({ dateKey, onChangeDate, categoryFilter }: WeekViewProps) {
+export function WeekView({ dateKey, onChangeDate, filters }: WeekViewProps) {
   const { colors, radius, spacing, type } = useTheme();
   const categoryMap = useCategoryMap();
   const weekStart = startOfWeekKey(dateKey);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysToKey(weekStart, i)), [weekStart]);
   const allActivities = useActivitiesInRange(days[0], days[6]);
-  const activities =
-    categoryFilter && categoryFilter.length > 0
-      ? allActivities.filter((a) => a.categoryId && categoryFilter.includes(a.categoryId))
-      : allActivities;
+  const activities = filters ? applyPlanFilters(allActivities, filters) : allActivities;
   const today = todayKey();
 
   const columns = useMemo(

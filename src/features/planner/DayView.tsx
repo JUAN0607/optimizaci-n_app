@@ -3,12 +3,14 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 
+import type { PlanFilters } from '@/components/PlanFilterModal';
 import { EmptyState } from '@/components/EmptyState';
 import { MONTH_LABELS, WEEKDAY_LABELS_LONG } from '@/constants/labels';
 import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useCategoryMap } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import { addDaysToKey, parseDateKey, todayKey } from '@/utils/date';
+import { applyPlanFilters } from '@/utils/planFilters';
 
 import { TimeGrid } from './TimeGrid';
 
@@ -17,16 +19,13 @@ const HOUR_HEIGHT = 64;
 interface DayViewProps {
   dateKey: string;
   onChangeDate: (dateKey: string) => void;
-  categoryFilter?: string[];
+  filters?: PlanFilters;
 }
 
-function DayPage({ dateKey, width, categoryFilter }: { dateKey: string; width: number; categoryFilter?: string[] }) {
+function DayPage({ dateKey, width, filters }: { dateKey: string; width: number; filters?: PlanFilters }) {
   const { colors, spacing, type } = useTheme();
   const allActivities = useActivitiesForDate(dateKey);
-  const activities =
-    categoryFilter && categoryFilter.length > 0
-      ? allActivities.filter((a) => a.categoryId && categoryFilter.includes(a.categoryId))
-      : allActivities;
+  const activities = filters ? applyPlanFilters(allActivities, filters) : allActivities;
   const categoryMap = useCategoryMap();
   const untimed = activities.filter((a) => !a.startTime);
 
@@ -77,7 +76,7 @@ function DayPage({ dateKey, width, categoryFilter }: { dateKey: string; width: n
   );
 }
 
-export function DayView({ dateKey, onChangeDate, categoryFilter }: DayViewProps) {
+export function DayView({ dateKey, onChangeDate, filters }: DayViewProps) {
   const { colors, spacing, type } = useTheme();
   const { width } = useWindowDimensions();
   const hScrollRef = useRef<ScrollView>(null);
@@ -126,7 +125,7 @@ export function DayView({ dateKey, onChangeDate, categoryFilter }: DayViewProps)
         key={centerDate}
       >
         {pages.map((d) => (
-          <DayPage key={d} dateKey={d} width={width} categoryFilter={categoryFilter} />
+          <DayPage key={d} dateKey={d} width={width} filters={filters} />
         ))}
       </ScrollView>
     </View>

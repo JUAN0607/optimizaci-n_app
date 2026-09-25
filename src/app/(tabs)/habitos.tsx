@@ -122,11 +122,13 @@ export default function HabitosScreen() {
                 { flex: 1, backgroundColor: colors.primaryStrong, borderRadius: radius.lg, padding: spacing.lg },
               ]}
             >
+              <Ionicons name="flame" size={20} color={colors.accentGold} style={{ marginBottom: spacing.md }} />
               <Text style={[type.h1, { color: colors.onPrimaryStrong }]}>{weekStats.bestStreak}</Text>
               <Text style={[type.bodySmall, { color: colors.onPrimaryStrong, opacity: 0.8, marginTop: 2 }]}>Racha actual</Text>
             </View>
-            <View style={[shadow.card, { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg }]}>
-              <Text style={[type.h1, { color: colors.primary }]}>{weekStats.weekPercent}%</Text>
+            <View style={[shadow.card, { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: radius.lg, padding: spacing.lg }]}>
+              <Ionicons name="bar-chart" size={20} color={colors.accentForest} style={{ marginBottom: spacing.md }} />
+              <Text style={[type.h1, { color: colors.textPrimary }]}>{weekStats.weekPercent}%</Text>
               <Text style={[type.bodySmall, { color: colors.textSecondary, marginTop: 2 }]}>Esta semana</Text>
             </View>
           </View>
