@@ -193,6 +193,27 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       }
     },
   },
+  {
+    version: 7,
+    up: (db) => {
+      // The default categories' colors are baked into the category row at creation time,
+      // so the last two palette iterations (Lovable-era, then Starboy) never reached
+      // already-seeded installs. Refresh them to the current palette, guarded on the
+      // exact old hex values so a category the user recolored themselves is left alone.
+      const fixes: [string, string, string[]][] = [
+        ['Universidad', '#6366F1', ['#006A67', '#00B8A9']],
+        ['Trabajo', '#F97316', ['#482C21', '#2F5FA8']],
+        ['Salud', '#22C55E', ['#3E6231', '#2ECC71']],
+        ['Personal', '#EC4899', ['#CA8541', '#F2994A']],
+        ['Hogar', '#F59E0B', ['#9C5F2C', '#E8598B']],
+        ['Proyectos', '#A855F7', ['#DCAB35']],
+      ];
+      for (const [name, color, oldColors] of fixes) {
+        const placeholders = oldColors.map(() => '?').join(', ');
+        db.runSync(`UPDATE category SET color = ? WHERE name = ? AND color IN (${placeholders})`, [color, name, ...oldColors]);
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {
