@@ -6,6 +6,7 @@ import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, Text, View } f
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryBadge } from '@/components/CategoryBadge';
+import { RitmoMark } from '@/components/RitmoMark';
 import { SegmentedControl } from '@/components/SegmentedControl';
 import { TextField } from '@/components/TextField';
 import { listCategories } from '@/db/repositories/categoryRepository';
@@ -181,6 +182,9 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title="Acerca de" colors={colors} type={type}>
+          <View style={{ alignItems: 'center', marginBottom: spacing.sm }}>
+            <RitmoMark size={40} />
+          </View>
           <Text style={[type.body, { color: colors.textSecondary }]}>RITMO v{Constants.expoConfig?.version ?? '1.0.0'}</Text>
           <Text style={[type.bodySmall, { color: colors.textTertiary, marginTop: 2 }]}>
             Tu sistema operativo personal para el tiempo.

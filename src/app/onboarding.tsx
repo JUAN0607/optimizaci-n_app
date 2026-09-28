@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { RitmoMark } from '@/components/RitmoMark';
 import { DEFAULT_CATEGORIES } from '@/constants/categories';
 import { updateSettings } from '@/db/repositories/settingsRepository';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -61,7 +62,12 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={[styles.content, { padding: spacing.xxl }]}>
-        <Text style={[type.h1, { color: colors.textPrimary, textAlign: 'center' }]}>{current.title}</Text>
+        {step === 0 && <RitmoMark size={72} />}
+        <Text
+          style={[type.h1, { color: colors.textPrimary, textAlign: 'center', marginTop: step === 0 ? spacing.lg : 0 }]}
+        >
+          {current.title}
+        </Text>
         <Text style={[type.bodyLarge, { color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md }]}>
           {current.body}
         </Text>

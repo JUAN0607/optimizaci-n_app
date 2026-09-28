@@ -6,7 +6,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { CreateActionSheet } from '@/components/CreateActionSheet';
 import { UndoSnackbar } from '@/components/UndoSnackbar';
 import { initDatabase } from '@/db';
@@ -37,41 +39,52 @@ export default function RootLayout() {
   }, [setThemeMode, setOnboardingCompleted, setHydrated]);
 
   const ready = fontsLoaded && hydrated;
+  const appOpacity = useSharedValue(0);
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+    // Our own animated splash is already covering the screen by this point, so the native
+    // one can come down immediately instead of staying frozen until data finishes loading.
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
-  if (!ready) return null;
+  useEffect(() => {
+    if (ready) appOpacity.value = withTiming(1, { duration: 250 });
+  }, [ready, appOpacity]);
+
+  const appStyle = useAnimatedStyle(() => ({ opacity: appOpacity.value }));
+
+  if (!ready) return <AnimatedSplash />;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <BottomSheetModalProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="activity/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="habit/stats/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="routine/[id]" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="search" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/task" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/event" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/habit" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/routine" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/reminder" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/category" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="create/goal" options={{ presentation: 'modal' }} />
-            </Stack>
-            <CreateActionSheet />
-            <UndoSnackbar />
-          </BottomSheetModalProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <Animated.View style={[{ flex: 1 }, appStyle]}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <BottomSheetModalProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="onboarding" options={{ presentation: 'fullScreenModal', gestureEnabled: false }} />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="activity/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="habit/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="habit/stats/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="routine/[id]" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/task" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/event" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/habit" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/routine" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/reminder" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/category" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="create/goal" options={{ presentation: 'modal' }} />
+              </Stack>
+              <CreateActionSheet />
+              <UndoSnackbar />
+            </BottomSheetModalProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </Animated.View>
   );
 }
