@@ -14,7 +14,7 @@ interface DateTimeFieldProps {
 }
 
 export function DateTimeField({ label, value, mode, onChange }: DateTimeFieldProps) {
-  const { colors, radius, spacing, type } = useTheme();
+  const { colors, radius, spacing, type, scheme } = useTheme();
   const id = useId();
   const activeId = useActivePickerStore((s) => s.activeId);
   const open = useActivePickerStore((s) => s.open);
@@ -54,6 +54,7 @@ export function DateTimeField({ label, value, mode, onChange }: DateTimeFieldPro
                 value={value}
                 mode={mode}
                 display="spinner"
+                themeVariant={scheme}
                 onChange={(_, selected) => {
                   if (selected) onChange(selected);
                 }}

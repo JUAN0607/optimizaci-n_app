@@ -1,7 +1,6 @@
-// RITMO palette — built around the teal already in the app's own logo mark, so the
-// brand feels like one coherent identity instead of a UI color scheme layered on top
-// of an unrelated icon. Warm, soft neutrals (not stark white / not pure black) carry
-// both themes; teal is the single interactive accent color across light and dark.
+// RITMO palette — strictly the 5-color "Starboy" scheme: every color anywhere in the
+// theme (including categories and charts) is one of these 5 or a tonal variant of one of
+// their 3 hue families (void/brown, navy, crimson). Nothing outside this palette.
 // Do not introduce new colors here; screens should reference semantic tokens from
 // `theme/index.ts` (ThemeColors), not these raw values directly.
 
@@ -15,51 +14,39 @@ export const brandMark = {
 } as const;
 
 export const palette = {
-  teal: {
-    900: '#134E4A', // deep — filled cards (primaryStrong in light mode)
-    700: '#0F766E', // base — buttons/links (primary in light mode)
-    600: '#0D9488', // chart accent
-    400: '#2DD4BF', // bright — primary in dark mode, pops on dark surfaces
-    300: '#5EEAD4', // soft — highlights, primarySoft
+  // Primario 45% — dominant background/base color.
+  void: {
+    base: '#1A0F0D',
+    mid: '#4A3226',
+    light: '#7A5A44',
   },
-  warm: {
-    amber600: '#D97706', // light-mode gold accent
-    amber400: '#FBBF24', // dark-mode gold accent
-    green600: '#16A34A', // light-mode success
-    green400: '#4ADE80', // dark-mode success
-    red600: '#DC2626',   // light-mode attention/overdue
-    red400: '#F87171',   // dark-mode attention/overdue
+  // Secundario 25% — primary interactive accent (buttons, active elements).
+  navy: {
+    base: '#0B2E66',
+    mid: '#3D6FB4',
+    light: '#6E96D0',
   },
-  neutralLight: {
-    background: '#FAF9F6',
-    surface: '#FFFFFF',
-    surfaceAlt: '#F1EFE9',
-    border: '#E4E1D9',
-    ink: '#1B1B18',
-    textSecondary: '#635F57',
-    textTertiary: '#9C978C',
+  // Acento 15% — attention/important elements (reminders, overdue, high priority).
+  crimson: {
+    base: '#A10F1F',
+    mid: '#C93646',
+    light: '#E37079',
   },
-  neutralDark: {
-    background: '#0E1416',
-    surface: '#161D1F',
-    surfaceAlt: '#1E2629',
-    border: '#2B3538',
-    textPrimary: '#F2F0EB',
-    textSecondary: '#B7B2A9',
-    textTertiary: '#7D7972',
-  },
+  // Neutro claro 10% — light-mode surfaces, and (per spec) dark-mode primary text.
+  ivory: '#F6F4EE',
+  // Neutro oscuro 5% — light-mode primary text/icons/high-emphasis contrast.
+  black: '#000000',
 } as const;
 
-// Categories and charts are intentionally off the brand's teal — a wider, more vivid
-// qualitative range keeps the schedule and graphs easy to tell apart at a glance and
-// avoids competing with teal's meaning as the interactive/brand accent everywhere else.
+// Categories and charts stay inside the same 3 hue families (void/brown, navy, crimson)
+// as the rest of the palette, just at different tones so they're still distinguishable.
 export const categoryColors = {
-  Universidad: '#6366F1', // indigo
-  Trabajo: '#F97316',     // orange
-  Salud: '#22C55E',       // green
-  Personal: '#EC4899',    // pink
-  Hogar: '#F59E0B',       // amber
-  Proyectos: '#A855F7',   // purple
+  Universidad: palette.navy.base,
+  Trabajo: palette.crimson.base,
+  Salud: palette.void.light,
+  Personal: palette.navy.mid,
+  Hogar: palette.crimson.mid,
+  Proyectos: palette.void.mid,
 } as const;
 
 export interface ThemeColors {
@@ -91,57 +78,57 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  background: palette.neutralLight.background,
-  surface: palette.neutralLight.surface,
-  surfaceAlt: palette.neutralLight.surfaceAlt,
-  border: palette.neutralLight.border,
-  textPrimary: palette.neutralLight.ink,
-  textSecondary: palette.neutralLight.textSecondary,
-  textTertiary: palette.neutralLight.textTertiary,
-  primary: palette.teal[700],
-  primaryStrong: palette.teal[900],
-  primarySoft: palette.teal[400],
-  onPrimary: palette.neutralLight.surface,
-  onPrimaryStrong: palette.neutralLight.surface,
-  accentGold: palette.warm.amber600,
-  accentTeal: palette.teal[600],
-  accentForest: palette.warm.green600,
-  success: palette.warm.green600,
-  overlay: 'rgba(27, 27, 24, 0.45)',
-  priorityHigh: palette.warm.red600,
-  priorityMedium: palette.warm.amber600,
-  priorityLow: palette.neutralLight.textTertiary,
-  statusPending: palette.neutralLight.textTertiary,
-  statusInProgress: palette.warm.amber600,
-  statusCompleted: palette.warm.green600,
-  statusSkipped: palette.neutralLight.textTertiary,
-  statusOverdue: palette.warm.red600,
+  background: palette.ivory,
+  surface: '#FFFFFF',
+  surfaceAlt: '#EDEAE2',
+  border: '#DDD8CC',
+  textPrimary: palette.black,
+  textSecondary: '#3D3733',
+  textTertiary: '#7A736A',
+  primary: palette.navy.base,
+  primaryStrong: palette.void.base,
+  primarySoft: palette.navy.mid,
+  onPrimary: '#FFFFFF',
+  onPrimaryStrong: palette.ivory,
+  accentGold: palette.void.light,
+  accentTeal: palette.navy.mid,
+  accentForest: palette.void.mid,
+  success: palette.navy.base,
+  overlay: 'rgba(26, 15, 13, 0.45)',
+  priorityHigh: palette.crimson.base,
+  priorityMedium: palette.crimson.mid,
+  priorityLow: '#7A736A',
+  statusPending: '#7A736A',
+  statusInProgress: palette.crimson.mid,
+  statusCompleted: palette.navy.base,
+  statusSkipped: '#7A736A',
+  statusOverdue: palette.crimson.base,
 };
 
 export const darkColors: ThemeColors = {
-  background: palette.neutralDark.background,
-  surface: palette.neutralDark.surface,
-  surfaceAlt: palette.neutralDark.surfaceAlt,
-  border: palette.neutralDark.border,
-  textPrimary: palette.neutralDark.textPrimary,
-  textSecondary: palette.neutralDark.textSecondary,
-  textTertiary: palette.neutralDark.textTertiary,
-  primary: palette.teal[400],
-  primaryStrong: palette.teal[700],
-  primarySoft: palette.teal[300],
-  onPrimary: palette.neutralDark.background,
-  onPrimaryStrong: palette.neutralDark.textPrimary,
-  accentGold: palette.warm.amber400,
-  accentTeal: palette.teal[300],
-  accentForest: palette.warm.green400,
-  success: palette.warm.green400,
+  background: palette.void.base,
+  surface: '#241713',
+  surfaceAlt: '#2E1E18',
+  border: '#3B2620',
+  textPrimary: palette.ivory,
+  textSecondary: '#C7BDB4',
+  textTertiary: '#8C8079',
+  primary: palette.navy.mid,
+  primaryStrong: palette.navy.base,
+  primarySoft: palette.navy.light,
+  onPrimary: palette.ivory,
+  onPrimaryStrong: palette.ivory,
+  accentGold: palette.void.light,
+  accentTeal: palette.navy.light,
+  accentForest: palette.void.light,
+  success: palette.navy.light,
   overlay: 'rgba(0, 0, 0, 0.6)',
-  priorityHigh: palette.warm.red400,
-  priorityMedium: palette.warm.amber400,
-  priorityLow: palette.neutralDark.textSecondary,
-  statusPending: palette.neutralDark.textSecondary,
-  statusInProgress: palette.warm.amber400,
-  statusCompleted: palette.warm.green400,
-  statusSkipped: palette.neutralDark.textSecondary,
-  statusOverdue: palette.warm.red400,
+  priorityHigh: palette.crimson.mid,
+  priorityMedium: palette.crimson.light,
+  priorityLow: '#8C8079',
+  statusPending: '#8C8079',
+  statusInProgress: palette.crimson.light,
+  statusCompleted: palette.navy.light,
+  statusSkipped: '#8C8079',
+  statusOverdue: palette.crimson.mid,
 };

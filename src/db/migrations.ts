@@ -214,6 +214,26 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       }
     },
   },
+  {
+    version: 8,
+    up: (db) => {
+      // The palette moved to a strict 5-color "Starboy" scheme (every color must be one
+      // of those 5 or a tonal variant of the same 3 hue families) — refresh already-seeded
+      // categories past all three prior generations, same guard pattern as v7.
+      const fixes: [string, string, string[]][] = [
+        ['Universidad', '#0B2E66', ['#006A67', '#00B8A9', '#6366F1']],
+        ['Trabajo', '#A10F1F', ['#482C21', '#2F5FA8', '#F97316']],
+        ['Salud', '#7A5A44', ['#3E6231', '#2ECC71', '#22C55E']],
+        ['Personal', '#3D6FB4', ['#CA8541', '#F2994A', '#EC4899']],
+        ['Hogar', '#C93646', ['#9C5F2C', '#E8598B', '#F59E0B']],
+        ['Proyectos', '#4A3226', ['#DCAB35', '#A855F7']],
+      ];
+      for (const [name, color, oldColors] of fixes) {
+        const placeholders = oldColors.map(() => '?').join(', ');
+        db.runSync(`UPDATE category SET color = ? WHERE name = ? AND color IN (${placeholders})`, [color, name, ...oldColors]);
+      }
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

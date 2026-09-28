@@ -114,12 +114,11 @@ const styles = StyleSheet.create({
     minWidth: 56,
   },
   fab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 8,
-    marginTop: -20,
   },
 });
