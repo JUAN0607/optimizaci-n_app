@@ -32,16 +32,16 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#0B2E66"
+          "color": "#000000"
         }
       ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F6F4EE",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/icon.png",
           "dark": {
-            "backgroundColor": "#1A0F0D"
+            "backgroundColor": "#000000"
           }
         }
       ],

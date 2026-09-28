@@ -27,7 +27,7 @@ export function AnimatedSplash() {
     transform: [{ scale: scale.value }, { rotate: `${rotation.value}deg` }],
   }));
 
-  const bg = scheme === 'dark' ? palette.void.base : palette.ivory;
+  const bg = scheme === 'dark' ? palette.black : '#FFFFFF';
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.container, { backgroundColor: bg }]}>

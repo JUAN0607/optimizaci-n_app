@@ -47,3 +47,10 @@ export function useTheme(): ThemeContextValue {
   }
   return ctx;
 }
+
+// For the handful of components (e.g. RitmoMark) that render both inside the app
+// (ThemeProvider available) and in the pre-hydration splash (it isn't yet) — returns
+// null instead of throwing so callers can fall back to the OS-level color scheme.
+export function useOptionalTheme(): ThemeContextValue | null {
+  return useContext(ThemeContext);
+}
