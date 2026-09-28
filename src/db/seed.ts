@@ -2,15 +2,15 @@ import { DEFAULT_CATEGORIES } from '@/constants/categories';
 import type { RecurrenceRule } from '@/types/entities';
 import { todayKey } from '@/utils/date';
 
-import { createActivity, setActivityStatus } from './repositories/activityRepository';
 import { listCategories, createCategory } from './repositories/categoryRepository';
 import { createHabit } from './repositories/habitRepository';
 import { logHabit } from './repositories/habitLogRepository';
 
 /**
  * Runs once, on first launch (categories table is the guard: if it's already populated,
- * seeding is skipped). Inserts the default categories always, and a realistic sample day
- * so Hoy isn't empty before the user has planned anything themselves.
+ * seeding is skipped). Only inserts the default categories and a few starter habits —
+ * the calendar/task list stays empty so a new user never sees placeholder content that
+ * looks like it belongs to someone else.
  */
 export function seedIfEmpty() {
   const existing = listCategories(true);
@@ -23,43 +23,6 @@ export function seedIfEmpty() {
   }
 
   const date = todayKey();
-  const sampleActivities: {
-    title: string;
-    category: string;
-    type: 'TASK' | 'EVENT';
-    startTime: string;
-    endTime: string;
-    completed?: boolean;
-  }[] = [
-    { title: 'Cálculo Multivariado', category: 'Universidad', type: 'EVENT', startTime: '07:00', endTime: '09:00', completed: true },
-    { title: 'Procesamiento de Imágenes', category: 'Universidad', type: 'EVENT', startTime: '09:00', endTime: '11:00', completed: true },
-    { title: 'Almuerzo', category: 'Personal', type: 'EVENT', startTime: '12:00', endTime: '12:30', completed: true },
-    { title: 'Física Moderna', category: 'Universidad', type: 'EVENT', startTime: '15:00', endTime: '17:00' },
-    { title: 'Gimnasio', category: 'Salud', type: 'TASK', startTime: '18:00', endTime: '19:00' },
-    { title: 'Leer', category: 'Personal', type: 'TASK', startTime: '20:00', endTime: '20:30' },
-    { title: 'Proyecto personal', category: 'Proyectos', type: 'TASK', startTime: '20:30', endTime: '22:00' },
-  ];
-
-  for (const item of sampleActivities) {
-    const activity = createActivity({
-      title: item.title,
-      notes: null,
-      type: item.type,
-      categoryId: byName.get(item.category) ?? null,
-      date,
-      startTime: item.startTime,
-      endTime: item.endTime,
-      duration: null,
-      priority: null,
-      recurrenceRule: null,
-      reminder: null,
-      location: null,
-    });
-    if (item.completed) {
-      setActivityStatus(activity.id, 'COMPLETED');
-    }
-  }
-
   const dailyRule: RecurrenceRule = { type: 'DAILY' };
   const weekdaysRule: RecurrenceRule = { type: 'SPECIFIC_DAYS', days: [1, 2, 3, 4, 5] };
 

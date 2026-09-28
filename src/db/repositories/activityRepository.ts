@@ -15,6 +15,7 @@ interface ActivityRow {
   type: string;
   category_id: string | null;
   date: string;
+  due_date: string | null;
   start_time: string | null;
   end_time: string | null;
   duration: number | null;
@@ -38,6 +39,7 @@ function fromRow(row: ActivityRow): Activity {
     type: row.type as Activity['type'],
     categoryId: row.category_id,
     date: row.date,
+    dueDate: row.due_date,
     startTime: row.start_time,
     endTime: row.end_time,
     duration: row.duration,
@@ -60,6 +62,33 @@ export type ActivityInput = Omit<
 > & {
   isRecurring?: boolean;
 };
+
+/**
+ * All tasks (not events/reminders), pending first then completed, soonest deadline/
+ * execution date first — the source for the standalone "Tareas" list (separate from any
+ * single day's agenda). Capped so a long-running daily recurring task can't crowd it out.
+ */
+export function listTasks(limit = 200): Activity[] {
+  const db = getDb();
+  const rows = db.getAllSync<ActivityRow>(
+    `SELECT * FROM activity WHERE type = 'TASK'
+     ORDER BY (status = 'COMPLETED') ASC, COALESCE(due_date, date) ASC, (start_time IS NULL), start_time ASC
+     LIMIT ?`,
+    [limit],
+  );
+  return rows.map(fromRow);
+}
+
+/** Tasks whose deadline (not execution date) falls on this day — used by Hoy to surface
+ * "se entrega hoy" separately from "toca hacerlo hoy", since those can be different days. */
+export function listTasksDueOnDate(date: string): Activity[] {
+  const db = getDb();
+  const rows = db.getAllSync<ActivityRow>(
+    `SELECT * FROM activity WHERE type = 'TASK' AND due_date = ? ORDER BY (status = 'COMPLETED') ASC, title ASC`,
+    [date],
+  );
+  return rows.map(fromRow);
+}
 
 export function listActivitiesForDate(date: string): Activity[] {
   const db = getDb();
@@ -97,9 +126,9 @@ export function getActivity(id: string): Activity | null {
 function insertActivityRow(activity: Activity): void {
   getDb().runSync(
     `INSERT INTO activity
-      (id, title, notes, type, category_id, date, start_time, end_time, duration, priority, status,
+      (id, title, notes, type, category_id, date, due_date, start_time, end_time, duration, priority, status,
        is_recurring, recurrence_rule, recurrence_group_id, reminder, location, created_at, updated_at, completed_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       activity.id,
       activity.title,
@@ -107,6 +136,7 @@ function insertActivityRow(activity: Activity): void {
       activity.type,
       activity.categoryId,
       activity.date,
+      activity.dueDate,
       activity.startTime,
       activity.endTime,
       activity.duration,
@@ -188,7 +218,7 @@ export function updateActivity(id: string, input: Partial<ActivityInput>): void 
   if (!existing) return;
   const merged: Activity = { ...existing, ...input, updatedAt: nowIso() };
   db.runSync(
-    `UPDATE activity SET title = ?, notes = ?, type = ?, category_id = ?, date = ?, start_time = ?, end_time = ?,
+    `UPDATE activity SET title = ?, notes = ?, type = ?, category_id = ?, date = ?, due_date = ?, start_time = ?, end_time = ?,
        duration = ?, priority = ?, is_recurring = ?, recurrence_rule = ?, reminder = ?, location = ?, updated_at = ?
      WHERE id = ?`,
     [
@@ -197,6 +227,7 @@ export function updateActivity(id: string, input: Partial<ActivityInput>): void 
       merged.type,
       merged.categoryId,
       merged.date,
+      merged.dueDate,
       merged.startTime,
       merged.endTime,
       merged.duration,

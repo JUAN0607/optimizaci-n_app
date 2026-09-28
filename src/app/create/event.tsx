@@ -55,6 +55,7 @@ export default function CreateEventScreen() {
       type: 'EVENT' as const,
       categoryId,
       date: activityDate,
+      dueDate: null,
       startTime: activityStartTime,
       endTime: endTime.toTimeString().slice(0, 5),
       duration: null,

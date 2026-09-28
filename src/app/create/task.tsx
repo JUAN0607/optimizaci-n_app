@@ -12,7 +12,12 @@ import { TextField } from '@/components/TextField';
 import { PRIORITY_LABELS } from '@/constants/labels';
 import { createActivity, getActivity, updateActivityWithRecurrence } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { cancelEntityNotification, scheduleActivityReminder, scheduleRecurringActivityReminder } from '@/notifications/notificationService';
+import {
+  cancelEntityNotification,
+  scheduleActivityDueReminder,
+  scheduleActivityReminder,
+  scheduleRecurringActivityReminder,
+} from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Priority, RecurrenceRule } from '@/types/entities';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
@@ -30,6 +35,10 @@ export default function CreateTaskScreen() {
 
   const [title, setTitle] = useState(existingActivity?.title ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(existingActivity?.categoryId ?? null);
+  const [dueDateEnabled, setDueDateEnabled] = useState(!!existingActivity?.dueDate);
+  const [dueDate, setDueDate] = useState(() =>
+    existingActivity?.dueDate ? combineDateAndTime(existingActivity.dueDate, null) : new Date(),
+  );
   const [date, setDate] = useState(() => (existingActivity ? combineDateAndTime(existingActivity.date, null) : new Date()));
   const [startTime, setStartTime] = useState(() =>
     existingActivity ? combineDateAndTime(existingActivity.date, existingActivity.startTime) : new Date(),
@@ -47,6 +56,7 @@ export default function CreateTaskScreen() {
   const save = () => {
     if (!canSave) return;
     const activityDate = toDateKey(date);
+    const activityDueDate = dueDateEnabled ? toDateKey(dueDate) : null;
     const activityStartTime = startTime.toTimeString().slice(0, 5);
     const payload = {
       title: title.trim(),
@@ -54,6 +64,7 @@ export default function CreateTaskScreen() {
       type: 'TASK' as const,
       categoryId,
       date: activityDate,
+      dueDate: activityDueDate,
       startTime: activityStartTime,
       endTime: null,
       duration,
@@ -91,6 +102,13 @@ export default function CreateTaskScreen() {
     } else if (isEditing) {
       cancelEntityNotification('ACTIVITY', activityId);
     }
+
+    if (activityDueDate) {
+      scheduleActivityDueReminder({ activityId, title: payload.title, dueDate: activityDueDate });
+    } else if (isEditing) {
+      cancelEntityNotification('ACTIVITY_DUE', activityId);
+    }
+
     bumpDataVersion();
     router.back();
   };
@@ -106,9 +124,21 @@ export default function CreateTaskScreen() {
       />
       <CategoryPicker value={categoryId} onChange={setCategoryId} />
 
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        <DateTimeField label="Fecha" mode="date" value={date} onChange={setDate} />
-        <DateTimeField label="Hora" mode="time" value={startTime} onChange={setStartTime} />
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[type.label, { color: colors.textSecondary }]}>FECHA DE ENTREGA</Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <FilterChip label="Sin fecha de entrega" selected={!dueDateEnabled} onPress={() => setDueDateEnabled(false)} />
+          <FilterChip label="Con fecha de entrega" selected={dueDateEnabled} onPress={() => setDueDateEnabled(true)} />
+        </View>
+        {dueDateEnabled && <DateTimeField label="Se entrega el" mode="date" value={dueDate} onChange={setDueDate} />}
+      </View>
+
+      <View style={{ gap: spacing.xs }}>
+        <Text style={[type.label, { color: colors.textSecondary }]}>CUÁNDO LO VAS A HACER</Text>
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <DateTimeField label="Fecha" mode="date" value={date} onChange={setDate} />
+          <DateTimeField label="Hora" mode="time" value={startTime} onChange={setStartTime} />
+        </View>
       </View>
 
       <View style={{ gap: spacing.xs }}>

@@ -34,7 +34,8 @@ export interface Activity {
   notes: string | null;
   type: ActivityType;
   categoryId: string | null;
-  date: string; // YYYY-MM-DD, local
+  date: string; // YYYY-MM-DD, local — when the user plans to actually do it
+  dueDate: string | null; // YYYY-MM-DD, local — the deadline/delivery date, if different
   startTime: string | null; // HH:mm
   endTime: string | null; // HH:mm
   duration: number | null; // minutes
@@ -125,7 +126,7 @@ export interface AppSettings {
 
 export interface NotificationMapEntry {
   id: string;
-  entityType: 'ACTIVITY' | 'HABIT' | 'DAILY_SUMMARY' | 'WEEKLY_SUMMARY';
+  entityType: 'ACTIVITY' | 'ACTIVITY_DUE' | 'HABIT' | 'DAILY_SUMMARY' | 'WEEKLY_SUMMARY';
   entityId: string;
   notificationId: string;
   scheduledFor: string;

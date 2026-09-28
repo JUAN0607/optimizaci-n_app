@@ -37,6 +37,7 @@ export default function CreateReminderScreen() {
       type: 'REMINDER' as const,
       categoryId: null,
       date: activityDate,
+      dueDate: null,
       startTime: activityStartTime,
       endTime: null,
       duration: null,

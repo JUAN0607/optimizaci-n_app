@@ -78,6 +78,27 @@ export async function scheduleActivityReminder(params: {
   saveMapping('ACTIVITY', params.activityId, notificationId, fireDate.toISOString());
 }
 
+// Deadline reminders fire the morning of the due date (a due date has no time-of-day of its
+// own, unlike the execution date/time), so the user is reminded regardless of when they'd
+// planned to actually do the work.
+const DUE_REMINDER_HOUR = 9;
+
+export async function scheduleActivityDueReminder(params: { activityId: string; title: string; dueDate: string }) {
+  await cancelEntityNotification('ACTIVITY_DUE', params.activityId);
+  if (!getSettings().notificationsEnabled) return;
+
+  const fireDate = combineDateAndTime(params.dueDate, null);
+  fireDate.setHours(DUE_REMINDER_HOUR, 0, 0, 0);
+  if (fireDate.getTime() <= Date.now()) return; // don't schedule reminders in the past
+
+  const notificationId = await Notifications.scheduleNotificationAsync({
+    content: { title: 'RITMO', body: `Hoy debes entregar: ${params.title}` },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
+  });
+
+  saveMapping('ACTIVITY_DUE', params.activityId, notificationId, fireDate.toISOString());
+}
+
 /**
  * Reminders for a recurring activity use native repeating triggers (DAILY/WEEKLY/MONTHLY/
  * TIME_INTERVAL) instead of one DATE-based notification per materialized occurrence — iOS

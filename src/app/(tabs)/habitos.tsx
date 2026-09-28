@@ -6,10 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { calculateStreak } from '@/analytics/streaks';
 import { EmptyState } from '@/components/EmptyState';
+import { GoalsList } from '@/components/GoalsList';
 import { HabitCard } from '@/components/HabitCard';
 import { IconEmoji } from '@/components/IconEmoji';
 import { SegmentedControl } from '@/components/SegmentedControl';
+import { TaskListItem } from '@/components/TaskListItem';
 import { WEEKDAY_LABELS_SHORT } from '@/constants/labels';
+import { listTasks, setActivityStatus } from '@/db/repositories/activityRepository';
 import { getLogForDate, listLogsForHabit, logHabit } from '@/db/repositories/habitLogRepository';
 import { listRoutineItems, listRoutines } from '@/db/repositories/routineRepository';
 import { listCompletedItemIds } from '@/db/repositories/routineLogRepository';
@@ -43,7 +46,7 @@ function weekProgressForHabit(habit: Habit, logs: HabitLog[], weekStart: string,
   return { due, done };
 }
 
-type Tab = 'habits' | 'routines';
+type Tab = 'goals' | 'tasks' | 'habits' | 'routines';
 
 export default function HabitosScreen() {
   const { colors, spacing, type, radius, shadow } = useTheme();
@@ -54,6 +57,25 @@ export default function HabitosScreen() {
   const dataVersion = useAppStore((s) => s.dataVersion);
   const showUndo = useUndoStore((s) => s.show);
   const today = todayKey();
+
+  const tasks = useMemo(() => {
+    if (tab !== 'tasks') return [];
+    return listTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
+  }, [tab, dataVersion]);
+
+  const toggleTaskComplete = (id: string, status: string, title: string) => {
+    const nextStatus = status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+    setActivityStatus(id, nextStatus);
+    bumpDataVersion();
+    if (nextStatus === 'COMPLETED') {
+      hapticComplete();
+      showUndo(`"${title}" completada`, () => {
+        setActivityStatus(id, 'PENDING');
+        bumpDataVersion();
+      });
+    }
+  };
 
   const rows = useMemo(
     () =>
@@ -112,7 +134,7 @@ export default function HabitosScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl, paddingBottom: 120 }}>
-        <Text style={[type.h1, { color: colors.textPrimary, marginBottom: spacing.lg }]}>Hábitos</Text>
+        <Text style={[type.h1, { color: colors.textPrimary, marginBottom: spacing.lg }]}>Gestión</Text>
 
         {rows.length > 0 && (
           <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
@@ -136,6 +158,8 @@ export default function HabitosScreen() {
 
         <SegmentedControl
           options={[
+            { value: 'goals', label: 'Metas' },
+            { value: 'tasks', label: 'Tareas' },
             { value: 'habits', label: 'Hábitos' },
             { value: 'routines', label: 'Rutinas' },
           ]}
@@ -144,7 +168,25 @@ export default function HabitosScreen() {
         />
 
         <View style={{ marginTop: spacing.xl }}>
-          {tab === 'habits' ? (
+          {tab === 'goals' ? (
+            <GoalsList />
+          ) : tab === 'tasks' ? (
+            tasks.length === 0 ? (
+              <EmptyState title="No tienes tareas." message="Crea una tarea desde el botón +." />
+            ) : (
+              <View style={{ gap: spacing.md }}>
+                {tasks.map((activity) => (
+                  <TaskListItem
+                    key={activity.id}
+                    activity={activity}
+                    category={activity.categoryId ? (categoryMap.get(activity.categoryId) ?? null) : null}
+                    onPress={() => router.push(`/activity/${activity.id}`)}
+                    onToggleComplete={() => toggleTaskComplete(activity.id, activity.status, activity.title)}
+                  />
+                ))}
+              </View>
+            )
+          ) : tab === 'habits' ? (
             rows.length === 0 ? (
               <EmptyState title="Todavía no tienes hábitos." message="Empieza con uno pequeño." />
             ) : (

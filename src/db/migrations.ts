@@ -234,6 +234,42 @@ const MIGRATIONS: { version: number; up: (db: SQLiteDatabase) => void }[] = [
       }
     },
   },
+  {
+    version: 9,
+    up: (db) => {
+      // The old seed inserted a "day in the life" sample of the developer's own university
+      // schedule (e.g. "Procesamiento de Imágenes"). seedIfEmpty() no longer creates these,
+      // but already-seeded installs still have them — purge that exact batch. Matched on
+      // title AND the seed's exact shape (no notes/recurrence/reminder/location/duration/
+      // priority) so a real task a user happened to title the same way is left untouched.
+      const demoTitles = [
+        'Cálculo Multivariado',
+        'Procesamiento de Imágenes',
+        'Almuerzo',
+        'Física Moderna',
+        'Gimnasio',
+        'Leer',
+        'Proyecto personal',
+      ];
+      const placeholders = demoTitles.map(() => '?').join(', ');
+      db.runSync(
+        `DELETE FROM activity WHERE title IN (${placeholders})
+           AND notes IS NULL AND recurrence_rule IS NULL AND is_recurring = 0
+           AND reminder IS NULL AND location IS NULL AND duration IS NULL AND priority IS NULL`,
+        demoTitles,
+      );
+    },
+  },
+  {
+    version: 10,
+    up: (db) => {
+      // Tasks now track two separate moments: `due_date` (the deadline — when it must be
+      // delivered) alongside the existing `date`/`start_time` (when the user actually plans
+      // to work on it), so a reminder can fire before the deadline instead of only at it.
+      db.execSync(`ALTER TABLE activity ADD COLUMN due_date TEXT;`);
+      db.execSync(`CREATE INDEX IF NOT EXISTS idx_activity_due_date ON activity(due_date);`);
+    },
+  },
 ];
 
 export function runMigrations(db: SQLiteDatabase) {

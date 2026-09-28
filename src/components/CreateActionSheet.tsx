@@ -18,6 +18,7 @@ const OPTIONS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMa
   { key: 'event', label: 'Nuevo evento', icon: 'calendar-outline', route: '/create/event' },
   { key: 'habit', label: 'Nuevo hábito', icon: 'repeat-outline', route: '/create/habit' },
   { key: 'routine', label: 'Nueva rutina', icon: 'list-outline', route: '/create/routine' },
+  { key: 'goal', label: 'Nueva meta', icon: 'trophy-outline', route: '/create/goal' },
   { key: 'reminder', label: 'Recordatorio', icon: 'notifications-outline', route: '/create/reminder' },
 ];
 

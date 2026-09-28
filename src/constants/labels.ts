@@ -21,7 +21,7 @@ export const STATUS_LABELS: Record<ActivityStatus, string> = {
 };
 
 export const MEASUREMENT_LABELS: Record<MeasurementType, string> = {
-  CHECKBOX: 'Simple',
+  CHECKBOX: 'Cumplido o no',
   DURATION: 'Duración',
   QUANTITY: 'Cantidad',
   DISTANCE: 'Distancia',

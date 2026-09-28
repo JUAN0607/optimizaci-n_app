@@ -132,6 +132,11 @@ export default function CreateHabitScreen() {
             />
           ))}
         </View>
+        {measurementType === 'CHECKBOX' && (
+          <Text style={[type.bodySmall, { color: colors.textSecondary }]}>
+            Solo marcas si lo cumpliste ese día o no, sin registrar cantidad.
+          </Text>
+        )}
       </View>
 
       {measurementType !== 'CHECKBOX' && (

@@ -9,6 +9,7 @@ function makeActivity(overrides: Partial<Activity>): Activity {
     type: 'TASK',
     categoryId: null,
     date: '2026-09-22',
+    dueDate: null,
     startTime: null,
     endTime: null,
     duration: null,

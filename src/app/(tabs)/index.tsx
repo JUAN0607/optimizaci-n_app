@@ -7,8 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { MetricCard } from '@/components/MetricCard';
 import { ProgressBar } from '@/components/ProgressBar';
+import { TaskListItem } from '@/components/TaskListItem';
 import { TimelineActivityRow } from '@/components/TimelineActivityRow';
-import { setActivityStatus } from '@/db/repositories/activityRepository';
+import { listTasksDueOnDate, setActivityStatus } from '@/db/repositories/activityRepository';
 import { useActivitiesForDate } from '@/hooks/useActivities';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategoryMap } from '@/hooks/useCategories';
@@ -48,7 +49,16 @@ export default function HoyScreen() {
   const categoryMap = useCategoryMap();
   const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
   const onboardingCompleted = useAppStore((s) => s.onboardingCompleted);
+  const dataVersion = useAppStore((s) => s.dataVersion);
   const showUndo = useUndoStore((s) => s.show);
+
+  // Tasks due today whose execution date isn't also today — those already show in "Tu
+  // agenda" below, this only adds the ones that'd otherwise be invisible until the deadline.
+  const dueToday = useMemo(
+    () => listTasksDueOnDate(date).filter((a) => a.date !== date),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dataVersion drives refetching from SQLite
+    [date, dataVersion],
+  );
 
   const { completed, total, pending, current } = useMemo(() => {
     const completedCount = activities.filter((a) => a.status === 'COMPLETED').length;
@@ -147,6 +157,23 @@ export default function HoyScreen() {
                   {categoryMap.get(current.categoryId)?.name}
                 </Text>
               )}
+            </View>
+          </View>
+        )}
+
+        {dueToday.length > 0 && (
+          <View style={{ marginTop: spacing.xl }}>
+            <Text style={[type.label, { color: colors.textTertiary, marginBottom: spacing.sm }]}>SE ENTREGAN HOY</Text>
+            <View style={{ gap: spacing.md }}>
+              {dueToday.map((activity) => (
+                <TaskListItem
+                  key={activity.id}
+                  activity={activity}
+                  category={activity.categoryId ? (categoryMap.get(activity.categoryId) ?? null) : null}
+                  onPress={() => router.push(`/activity/${activity.id}`)}
+                  onToggleComplete={() => toggleComplete(activity.id, activity.status, activity.title)}
+                />
+              ))}
             </View>
           </View>
         )}
