@@ -41,7 +41,7 @@ interface PlanFilterModalProps {
 }
 
 export function PlanFilterModal({ visible, filters, onApply, onClose, dateKey, onChangeDate }: PlanFilterModalProps) {
-  const { colors, radius, spacing, type, shadow } = useTheme();
+  const { colors, radius, spacing, type } = useTheme();
   const categories = useCategories();
 
   const toggle = <T,>(list: T[], value: T): T[] => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -54,15 +54,12 @@ export function PlanFilterModal({ visible, filters, onApply, onClose, dateKey, o
         <GlassSurface
           variant="thick"
           edge
-          style={[
-            shadow.floating,
-            {
-              borderTopLeftRadius: radius.lg,
-              borderTopRightRadius: radius.lg,
-              maxHeight: '82%',
-              overflow: 'hidden',
-            },
-          ]}
+          style={{
+            borderTopLeftRadius: radius.lg,
+            borderTopRightRadius: radius.lg,
+            maxHeight: '82%',
+            overflow: 'hidden',
+          }}
         >
           <View
             style={{

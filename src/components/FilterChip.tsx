@@ -10,7 +10,7 @@ interface FilterChipProps {
 }
 
 export function FilterChip({ label, selected, onPress, color }: FilterChipProps) {
-  const { colors, radius, spacing, type } = useTheme();
+  const { colors, radius, spacing, type, shadow } = useTheme();
   const tint = color ?? colors.primary;
 
   return (
@@ -20,6 +20,7 @@ export function FilterChip({ label, selected, onPress, color }: FilterChipProps)
       accessibilityState={{ selected }}
       style={[
         styles.chip,
+        shadow.card,
         {
           backgroundColor: selected ? tint : colors.surfaceAlt,
           borderRadius: radius.pill,

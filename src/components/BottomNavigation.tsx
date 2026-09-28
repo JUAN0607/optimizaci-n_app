@@ -65,7 +65,6 @@ export function BottomNavigation({ state, descriptors, navigation }: BottomTabBa
         edge
         style={[
           styles.container,
-          shadow.floating,
           { borderRadius: radius.xl, borderColor: scheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.5)' },
         ]}
       >

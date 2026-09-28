@@ -13,6 +13,11 @@ export const brandMark = {
   teal: '#006A67',
 } as const;
 
+// The streak "flame" is always this exact amber, in both themes — it reads as a warm,
+// consistent signal (and matches the logo's own gold ring) rather than shifting tone
+// with the rest of the palette.
+export const flameColor = brandMark.gold;
+
 export const palette = {
   // Primario 45% — dominant background/base color.
   void: {
@@ -90,7 +95,7 @@ export const lightColors: ThemeColors = {
   primarySoft: palette.navy.mid,
   onPrimary: '#FFFFFF',
   onPrimaryStrong: palette.ivory,
-  accentGold: palette.void.light,
+  accentGold: flameColor,
   accentTeal: palette.navy.mid,
   accentForest: palette.void.mid,
   success: palette.navy.base,
@@ -118,7 +123,7 @@ export const darkColors: ThemeColors = {
   primarySoft: palette.navy.light,
   onPrimary: palette.ivory,
   onPrimaryStrong: palette.ivory,
-  accentGold: palette.void.light,
+  accentGold: flameColor,
   accentTeal: palette.navy.light,
   accentForest: palette.void.light,
   success: palette.navy.light,
