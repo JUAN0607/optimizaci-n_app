@@ -5,20 +5,13 @@ import { suggestEmoji } from '@/constants/emojis';
 import { createCategory } from '@/db/repositories/categoryRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategories } from '@/hooks/useCategories';
-import { palette } from '@/theme/colors';
+import { categoryColors } from '@/theme/colors';
 import { useTheme } from '@/theme/ThemeProvider';
 
 import { FilterChip } from './FilterChip';
 import { TextField } from './TextField';
 
-const NEW_CATEGORY_COLORS = [
-  palette.primary.espresso,
-  palette.primary.caramel,
-  palette.primary.amber,
-  palette.secondary.forest,
-  palette.secondary.teal,
-  palette.secondary.gold,
-];
+const NEW_CATEGORY_COLORS = Object.values(categoryColors);
 
 interface CategoryPickerProps {
   value: string | null;

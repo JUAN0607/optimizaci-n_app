@@ -8,17 +8,10 @@ import { TextField } from '@/components/TextField';
 import { suggestEmoji } from '@/constants/emojis';
 import { createCategory, getCategory, updateCategory } from '@/db/repositories/categoryRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { palette } from '@/theme/colors';
+import { categoryColors } from '@/theme/colors';
 import { useTheme } from '@/theme/ThemeProvider';
 
-const COLOR_OPTIONS = [
-  palette.primary.espresso,
-  palette.primary.caramel,
-  palette.primary.amber,
-  palette.secondary.forest,
-  palette.secondary.teal,
-  palette.secondary.gold,
-];
+const COLOR_OPTIONS = Object.values(categoryColors);
 
 export default function CreateCategoryScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
