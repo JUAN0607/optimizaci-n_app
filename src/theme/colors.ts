@@ -4,19 +4,9 @@
 // Do not introduce new colors here; screens should reference semantic tokens from
 // `theme/index.ts` (ThemeColors), not these raw values directly.
 
-// The RITMO logo (app icon, native splash, in-app RitmoMark) is a fixed brand mark —
-// intentionally independent of the UI theme below, so it never drifts from the icon/
-// splash assets already baked into the native build, regardless of theme or light/dark.
-export const brandMark = {
-  amber: '#CA8541',
-  gold: '#DCAB35',
-  teal: '#006A67',
-} as const;
-
 // The streak "flame" is always this exact amber, in both themes — it reads as a warm,
-// consistent signal (and matches the logo's own gold ring) rather than shifting tone
-// with the rest of the palette.
-export const flameColor = brandMark.gold;
+// consistent signal rather than shifting tone with the rest of the palette.
+export const flameColor = '#DCAB35';
 
 export const palette = {
   // Primario 45% — dominant background/base color.
@@ -83,57 +73,57 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  background: palette.ivory,
+  background: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceAlt: '#EDEAE2',
-  border: '#DDD8CC',
+  surfaceAlt: '#F3F3F1',
+  border: '#E4E3E0',
   textPrimary: palette.black,
-  textSecondary: '#3D3733',
-  textTertiary: '#7A736A',
+  textSecondary: '#3D3D3D',
+  textTertiary: '#7A7A7A',
   primary: palette.navy.base,
-  primaryStrong: palette.void.base,
+  primaryStrong: palette.black,
   primarySoft: palette.navy.mid,
   onPrimary: '#FFFFFF',
-  onPrimaryStrong: palette.ivory,
+  onPrimaryStrong: '#FFFFFF',
   accentGold: flameColor,
   accentTeal: palette.navy.mid,
   accentForest: palette.void.mid,
   success: palette.navy.base,
-  overlay: 'rgba(26, 15, 13, 0.45)',
+  overlay: 'rgba(0, 0, 0, 0.45)',
   priorityHigh: palette.crimson.base,
   priorityMedium: palette.crimson.mid,
-  priorityLow: '#7A736A',
-  statusPending: '#7A736A',
+  priorityLow: '#7A7A7A',
+  statusPending: '#7A7A7A',
   statusInProgress: palette.crimson.mid,
   statusCompleted: palette.navy.base,
-  statusSkipped: '#7A736A',
+  statusSkipped: '#7A7A7A',
   statusOverdue: palette.crimson.base,
 };
 
 export const darkColors: ThemeColors = {
-  background: palette.void.base,
-  surface: '#241713',
-  surfaceAlt: '#2E1E18',
-  border: '#3B2620',
-  textPrimary: palette.ivory,
-  textSecondary: '#C7BDB4',
-  textTertiary: '#8C8079',
+  background: palette.black,
+  surface: '#121212',
+  surfaceAlt: '#1C1C1C',
+  border: '#2A2A2A',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#B3B3B3',
+  textTertiary: '#808080',
   primary: palette.navy.mid,
   primaryStrong: palette.navy.base,
   primarySoft: palette.navy.light,
-  onPrimary: palette.ivory,
-  onPrimaryStrong: palette.ivory,
+  onPrimary: '#FFFFFF',
+  onPrimaryStrong: '#FFFFFF',
   accentGold: flameColor,
   accentTeal: palette.navy.light,
   accentForest: palette.void.light,
   success: palette.navy.light,
-  overlay: 'rgba(0, 0, 0, 0.6)',
+  overlay: 'rgba(0, 0, 0, 0.7)',
   priorityHigh: palette.crimson.mid,
   priorityMedium: palette.crimson.light,
-  priorityLow: '#8C8079',
-  statusPending: '#8C8079',
+  priorityLow: '#808080',
+  statusPending: '#808080',
   statusInProgress: palette.crimson.light,
   statusCompleted: palette.navy.light,
-  statusSkipped: '#8C8079',
+  statusSkipped: '#808080',
   statusOverdue: palette.crimson.mid,
 };

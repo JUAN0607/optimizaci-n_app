@@ -100,17 +100,17 @@ export default function HoyScreen() {
               onPress={() => router.push('/search')}
               accessibilityRole="button"
               accessibilityLabel="Buscar"
-              style={[styles.avatarButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}
+              style={[styles.avatarButton, shadow.card, { backgroundColor: colors.primary, borderRadius: radius.pill }]}
             >
-              <Ionicons name="search-outline" size={20} color={colors.primaryStrong} />
+              <Ionicons name="search" size={20} color={colors.onPrimary} />
             </Pressable>
             <Pressable
               onPress={() => router.push('/settings')}
               accessibilityRole="button"
               accessibilityLabel="Ajustes"
-              style={[styles.avatarButton, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}
+              style={[styles.avatarButton, shadow.card, { backgroundColor: colors.primary, borderRadius: radius.pill }]}
             >
-              <Ionicons name="person-outline" size={20} color={colors.primaryStrong} />
+              <Ionicons name="person" size={20} color={colors.onPrimary} />
             </Pressable>
           </View>
         </View>

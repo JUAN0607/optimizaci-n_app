@@ -16,7 +16,7 @@ import { todayKey } from '@/utils/date';
 type ViewMode = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 export default function PlanScreen() {
-  const { colors, spacing, type } = useTheme();
+  const { colors, spacing, type, shadow } = useTheme();
   const [viewMode, setViewMode] = useState<ViewMode>('DAY');
   const [dateKey, setDateKey] = useState(todayKey());
   const [showFilters, setShowFilters] = useState(false);
@@ -50,31 +50,37 @@ export default function PlanScreen() {
             onPress={() => router.push('/search')}
             accessibilityRole="button"
             accessibilityLabel="Buscar"
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: colors.surfaceAlt,
-              borderRadius: 20,
-            }}
+            style={[
+              shadow.card,
+              {
+                width: 40,
+                height: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.primary,
+                borderRadius: 20,
+              },
+            ]}
           >
-            <Ionicons name="search-outline" size={20} color={colors.primaryStrong} />
+            <Ionicons name="search" size={20} color={colors.onPrimary} />
           </Pressable>
           <Pressable
             onPress={() => setShowFilters(true)}
             accessibilityRole="button"
             accessibilityLabel="Filtros"
-            style={{
-              width: 40,
-              height: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: activeFilterCount > 0 ? colors.primaryStrong : colors.surfaceAlt,
-              borderRadius: 20,
-            }}
+            style={[
+              shadow.card,
+              {
+                width: 40,
+                height: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.primary,
+                borderRadius: 20,
+              },
+            ]}
           >
-            <Ionicons name="options-outline" size={20} color={activeFilterCount > 0 ? colors.onPrimaryStrong : colors.primaryStrong} />
+            <Ionicons name="options" size={20} color={colors.onPrimary} />
             {activeFilterCount > 0 && (
               <View
                 style={{
