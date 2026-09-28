@@ -1,9 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import BottomSheet, { BottomSheetBackdrop, type BottomSheetBackdropProps, BottomSheetView } from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetBackdrop,
+  type BottomSheetBackdropProps,
+  type BottomSheetBackgroundProps,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { GlassSurface } from '@/components/GlassSurface';
 import { useCreateSheetStore } from '@/hooks/useCreateSheetStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -24,6 +30,14 @@ export function CreateActionSheet() {
   const { isOpen, close } = useCreateSheetStore();
   const { colors, spacing, radius, type } = useTheme();
 
+  const GlassBackground = ({ style }: BottomSheetBackgroundProps) => (
+    <GlassSurface
+      variant="thick"
+      edge
+      style={[style, { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden' }]}
+    />
+  );
+
   useEffect(() => {
     if (isOpen) sheetRef.current?.expand();
     else sheetRef.current?.close();
@@ -37,7 +51,7 @@ export function CreateActionSheet() {
       enablePanDownToClose
       backdropComponent={Backdrop}
       onClose={close}
-      backgroundStyle={{ backgroundColor: colors.surface }}
+      backgroundComponent={GlassBackground}
       handleIndicatorStyle={{ backgroundColor: colors.border }}
     >
       <BottomSheetView style={[styles.content, { padding: spacing.xl }]}>

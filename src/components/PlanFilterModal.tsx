@@ -9,6 +9,7 @@ import { parseDateKey, toDateKey } from '@/utils/date';
 
 import { DateTimeField } from './DateTimeField';
 import { FilterChip } from './FilterChip';
+import { GlassSurface } from './GlassSurface';
 
 export type ActivityStateFilter = 'PENDING' | 'COMPLETED';
 
@@ -50,14 +51,16 @@ export function PlanFilterModal({ visible, filters, onApply, onClose, dateKey, o
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' }}>
-        <View
+        <GlassSurface
+          variant="thick"
+          edge
           style={[
             shadow.floating,
             {
-              backgroundColor: colors.background,
               borderTopLeftRadius: radius.lg,
               borderTopRightRadius: radius.lg,
               maxHeight: '82%',
+              overflow: 'hidden',
             },
           ]}
         >
@@ -180,7 +183,7 @@ export function PlanFilterModal({ visible, filters, onApply, onClose, dateKey, o
               <Text style={[type.bodyMedium, { color: colors.onPrimaryStrong }]}>Aplicar</Text>
             </Pressable>
           </View>
-        </View>
+        </GlassSurface>
       </View>
     </Modal>
   );

@@ -2,6 +2,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useId } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { GlassSurface } from '@/components/GlassSurface';
 import { useActivePickerStore } from '@/hooks/useActivePickerStore';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -45,7 +46,10 @@ export function DateTimeField({ label, value, mode, onChange }: DateTimeFieldPro
       {Platform.OS === 'ios' ? (
         <Modal visible={isOpen} transparent animationType="fade" onRequestClose={() => close(id)}>
           <Pressable style={styles.backdrop} onPress={() => close(id)}>
-            <View style={[styles.sheet, { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md }]}>
+            <GlassSurface
+              variant="thick"
+              style={[styles.sheet, { borderRadius: radius.lg, padding: spacing.md, overflow: 'hidden' }]}
+            >
               <DateTimePicker
                 value={value}
                 mode={mode}
@@ -60,7 +64,7 @@ export function DateTimeField({ label, value, mode, onChange }: DateTimeFieldPro
               >
                 <Text style={[type.bodyMedium, { color: colors.onPrimary }]}>Listo</Text>
               </Pressable>
-            </View>
+            </GlassSurface>
           </Pressable>
         </Modal>
       ) : (

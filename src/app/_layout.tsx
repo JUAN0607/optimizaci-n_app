@@ -1,6 +1,4 @@
-import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -19,12 +17,6 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    DMSans_400Regular,
-    DMSans_500Medium,
-    DMSans_600SemiBold,
-    DMSans_700Bold,
-  });
   const setThemeMode = useAppStore((s) => s.setThemeMode);
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
   const setHydrated = useAppStore((s) => s.setHydrated);
@@ -38,7 +30,7 @@ export default function RootLayout() {
     setHydrated(true);
   }, [setThemeMode, setOnboardingCompleted, setHydrated]);
 
-  const ready = fontsLoaded && hydrated;
+  const ready = hydrated;
   const appOpacity = useSharedValue(0);
 
   useEffect(() => {

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import type { PropsWithChildren } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { GlassSurface } from '@/components/GlassSurface';
 import { useTheme } from '@/theme/ThemeProvider';
 
 interface FormScreenProps extends PropsWithChildren {
@@ -18,7 +19,11 @@ export function FormScreen({ title, onSave, saveLabel = 'Guardar', saveDisabled,
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingHorizontal: spacing.xl, paddingVertical: spacing.md }]}>
+      <GlassSurface
+        variant="thin"
+        edge
+        style={[styles.header, { paddingHorizontal: spacing.xl, paddingVertical: spacing.md }]}
+      >
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={8}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </Pressable>
@@ -34,7 +39,7 @@ export function FormScreen({ title, onSave, saveLabel = 'Guardar', saveDisabled,
             {saveLabel}
           </Text>
         </Pressable>
-      </View>
+      </GlassSurface>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg }} keyboardShouldPersistTaps="handled">
           {children}
