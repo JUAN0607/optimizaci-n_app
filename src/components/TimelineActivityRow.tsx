@@ -4,10 +4,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable, { type SwipeableMethods, SwipeDirection } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, { interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
+import { ACTIVITY_TYPE_LABELS } from '@/constants/labels';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { Activity, Category } from '@/types/entities';
 
 import { CategoryBadge } from './CategoryBadge';
+
+const TYPE_ICONS: Record<Activity['type'], keyof typeof Ionicons.glyphMap> = {
+  TASK: 'checkbox-outline',
+  EVENT: 'calendar-outline',
+  REMINDER: 'notifications-outline',
+};
 
 interface TimelineActivityRowProps {
   activity: Activity;
@@ -85,9 +92,13 @@ export function TimelineActivityRow({ activity, category, isLast, onPress, onTog
           <Pressable
             onPress={onPress}
             accessibilityRole="button"
-            accessibilityLabel={`${activity.title}, ${isCompleted ? 'completada' : 'pendiente'}`}
+            accessibilityLabel={`${ACTIVITY_TYPE_LABELS[activity.type]}: ${activity.title}, ${isCompleted ? 'completada' : 'pendiente'}`}
             style={({ pressed }) => [{ opacity: pressed ? 0.85 : isCompleted ? 0.6 : 1 }]}
           >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 }}>
+              <Ionicons name={TYPE_ICONS[activity.type]} size={12} color={colors.textTertiary} />
+              <Text style={[type.caption, { color: colors.textTertiary }]}>{ACTIVITY_TYPE_LABELS[activity.type]}</Text>
+            </View>
             <Text
               style={[type.bodyMedium, { color: colors.textPrimary, textDecorationLine: isCompleted ? 'line-through' : 'none' }]}
               numberOfLines={2}
