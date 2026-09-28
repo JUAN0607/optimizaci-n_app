@@ -10,11 +10,13 @@ import { FormScreen } from '@/components/FormScreen';
 import { TextField } from '@/components/TextField';
 import { MEASUREMENT_LABELS } from '@/constants/labels';
 import { suggestEmoji } from '@/constants/emojis';
+import { UNIT_OPTIONS } from '@/constants/units';
 import { createHabit, getHabit, updateHabit } from '@/db/repositories/habitRepository';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useCategories } from '@/hooks/useCategories';
 import { useTheme } from '@/theme/ThemeProvider';
 import type { MeasurementType } from '@/types/entities';
+import { sanitizeNumericInput } from '@/utils/numberInput';
 
 export default function CreateHabitScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -38,6 +40,9 @@ export default function CreateHabitScreen() {
   const [target, setTarget] = useState(existingHabit?.target != null ? String(existingHabit.target) : '');
   const [targetUnit, setTargetUnit] = useState(existingHabit?.targetUnit ?? '');
   const [notes, setNotes] = useState(existingHabit?.notes ?? '');
+
+  const unitOptions = UNIT_OPTIONS[measurementType];
+  const isCustomUnit = targetUnit !== '' && !unitOptions.includes(targetUnit);
 
   const canSave = name.trim().length > 0;
 
@@ -114,20 +119,43 @@ export default function CreateHabitScreen() {
         <Text style={[type.label, { color: colors.textSecondary }]}>MEDICIÓN</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
           {(Object.keys(MEASUREMENT_LABELS) as MeasurementType[]).map((m) => (
-            <FilterChip key={m} label={MEASUREMENT_LABELS[m]} selected={measurementType === m} onPress={() => setMeasurementType(m)} />
+            <FilterChip
+              key={m}
+              label={MEASUREMENT_LABELS[m]}
+              selected={measurementType === m}
+              onPress={() => {
+                setMeasurementType(m);
+                if (!UNIT_OPTIONS[m].includes(targetUnit)) {
+                  setTargetUnit(UNIT_OPTIONS[m][0] ?? '');
+                }
+              }}
+            />
           ))}
         </View>
       </View>
 
       {measurementType !== 'CHECKBOX' && (
-        <View style={{ flexDirection: 'row', gap: spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <TextField label="Meta" value={target} onChangeText={setTarget} keyboardType="numeric" placeholder="30" />
+        <>
+          <TextField
+            label="Meta"
+            value={target}
+            onChangeText={(t) => setTarget(sanitizeNumericInput(t))}
+            keyboardType="numeric"
+            placeholder="30"
+          />
+          <View style={{ gap: spacing.xs }}>
+            <Text style={[type.label, { color: colors.textSecondary }]}>UNIDAD</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {unitOptions.map((u) => (
+                <FilterChip key={u} label={u} selected={!isCustomUnit && targetUnit === u} onPress={() => setTargetUnit(u)} />
+              ))}
+              <FilterChip label="Otro" selected={isCustomUnit} onPress={() => setTargetUnit('')} />
+            </View>
+            {isCustomUnit && (
+              <TextField label="" value={targetUnit} onChangeText={setTargetUnit} placeholder="Escribe la unidad" autoFocus />
+            )}
           </View>
-          <View style={{ flex: 1 }}>
-            <TextField label="Unidad" value={targetUnit} onChangeText={setTargetUnit} placeholder="min, km, vasos..." />
-          </View>
-        </View>
+        </>
       )}
 
       <TextField label="Notas" value={notes} onChangeText={setNotes} placeholder="Notas opcionales" multiline numberOfLines={3} />

@@ -20,6 +20,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { describeRecurrence, isScheduledDay, startOfWeekKey } from '@/utils/recurrence';
 import { addDaysToKey, todayKey } from '@/utils/date';
 import { hapticComplete } from '@/utils/haptics';
+import { sanitizeNumericInput } from '@/utils/numberInput';
 
 const HISTORY_WEEKS = 6;
 
@@ -221,14 +222,19 @@ export default function HabitDetailScreen() {
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <TextField
-                  label=""
-                  value={pendingValue}
-                  onChangeText={setPendingValue}
-                  keyboardType="numeric"
-                  placeholder={`Meta: ${habit.target ?? ''} ${habit.targetUnit ?? ''}`}
-                />
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <View style={{ flex: 1 }}>
+                  <TextField
+                    label=""
+                    value={pendingValue}
+                    onChangeText={(t) => setPendingValue(sanitizeNumericInput(t))}
+                    keyboardType="numeric"
+                    placeholder={`Meta: ${habit.target ?? ''}`}
+                  />
+                </View>
+                {habit.targetUnit && (
+                  <Text style={[type.bodyMedium, { color: colors.textSecondary }]}>{habit.targetUnit}</Text>
+                )}
               </View>
               <Pressable
                 onPress={completeToday}
