@@ -53,6 +53,11 @@ export async function cancelEntityNotification(entityType: NotificationMapEntry[
   }
 }
 
+/**
+ * Schedules up to two one-off notifications for an activity: the "before" reminder the user
+ * configured (if `minutesBefore` > 0) AND, always, one right when it actually starts — a
+ * before-only reminder is easy to miss if you're not free yet, so both fire independently.
+ */
 export async function scheduleActivityReminder(params: {
   activityId: string;
   title: string;
@@ -63,19 +68,27 @@ export async function scheduleActivityReminder(params: {
   await cancelEntityNotification('ACTIVITY', params.activityId);
   if (!params.startTime || !getSettings().notificationsEnabled) return;
 
-  const fireDate = combineDateAndTime(params.date, params.startTime);
-  fireDate.setMinutes(fireDate.getMinutes() - params.minutesBefore);
-  if (fireDate.getTime() <= Date.now()) return; // don't schedule reminders in the past
+  const startDate = combineDateAndTime(params.date, params.startTime);
 
-  const notificationId = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: 'RITMO',
-      body: params.minutesBefore > 0 ? `En ${params.minutesBefore} minutos: ${params.title}` : `Es hora de: ${params.title}`,
-    },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: fireDate },
-  });
+  if (params.minutesBefore > 0) {
+    const beforeDate = new Date(startDate);
+    beforeDate.setMinutes(beforeDate.getMinutes() - params.minutesBefore);
+    if (beforeDate.getTime() > Date.now()) {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: { title: 'RITMO', body: `En ${params.minutesBefore} minutos: ${params.title}` },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: beforeDate },
+      });
+      saveMapping('ACTIVITY', params.activityId, id, beforeDate.toISOString());
+    }
+  }
 
-  saveMapping('ACTIVITY', params.activityId, notificationId, fireDate.toISOString());
+  if (startDate.getTime() > Date.now()) {
+    const id = await Notifications.scheduleNotificationAsync({
+      content: { title: 'RITMO', body: `Es hora de: ${params.title}` },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: startDate },
+    });
+    saveMapping('ACTIVITY', params.activityId, id, startDate.toISOString());
+  }
 }
 
 // Deadline reminders fire the morning of the due date (a due date has no time-of-day of its
@@ -99,12 +112,20 @@ export async function scheduleActivityDueReminder(params: { activityId: string; 
   saveMapping('ACTIVITY_DUE', params.activityId, notificationId, fireDate.toISOString());
 }
 
+function wrapClockTime(startHour: number, startMinute: number, offsetMinutes: number): { hour: number; minute: number } {
+  const wrapped = (((startHour * 60 + startMinute - offsetMinutes) % 1440) + 1440) % 1440;
+  return { hour: Math.floor(wrapped / 60), minute: wrapped % 60 };
+}
+
 /**
  * Reminders for a recurring activity use native repeating triggers (DAILY/WEEKLY/MONTHLY/
  * TIME_INTERVAL) instead of one DATE-based notification per materialized occurrence — iOS
  * caps an app at 64 pending local notifications, and a daily task alone could materialize
  * ~365 rows. SPECIFIC_DAYS is the only case needing more than one trigger (one WEEKLY per
  * selected weekday), which still stays comfortably under that limit.
+ *
+ * Like scheduleActivityReminder, this schedules both the "before" reminder (if configured)
+ * and one right at the occurrence's own start time, so both fire on every recurrence.
  */
 export async function scheduleRecurringActivityReminder(params: {
   activityId: string;
@@ -117,39 +138,53 @@ export async function scheduleRecurringActivityReminder(params: {
   if (!getSettings().notificationsEnabled) return;
 
   const [startHour, startMinute] = params.startTime.split(':').map(Number);
-  const wrapped = (((startHour * 60 + startMinute - params.minutesBefore) % 1440) + 1440) % 1440;
-  const hour = Math.floor(wrapped / 60);
-  const minute = wrapped % 60;
-  const body = params.minutesBefore > 0 ? `En ${params.minutesBefore} minutos: ${params.title}` : `Es hora de: ${params.title}`;
   const rule = params.recurrenceRule;
 
-  if (rule.type === 'DAILY') {
-    const id = await Notifications.scheduleNotificationAsync({
-      content: { title: 'RITMO', body },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
-    });
-    saveMapping('ACTIVITY', params.activityId, id, `daily@${hour}:${minute}`);
-  } else if (rule.type === 'SPECIFIC_DAYS') {
-    for (const day of rule.days) {
-      const weekday = day + 1; // our days: 0=Sun..6=Sat; expo-notifications weekday: 1=Sun..7=Sat
-      const id = await Notifications.scheduleNotificationAsync({
-        content: { title: 'RITMO', body },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday, hour, minute },
-      });
-      saveMapping('ACTIVITY', params.activityId, id, `weekly@${weekday}`);
-    }
-  } else if (rule.type === 'MONTHLY') {
-    const id = await Notifications.scheduleNotificationAsync({
-      content: { title: 'RITMO', body },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.MONTHLY, day: rule.dayOfMonth, hour, minute },
-    });
-    saveMapping('ACTIVITY', params.activityId, id, `monthly@${rule.dayOfMonth}`);
-  } else if (rule.type === 'EVERY_X_DAYS') {
+  if (rule.type === 'EVERY_X_DAYS') {
+    // TIME_INTERVAL triggers count seconds from "now", with no wall-clock hour/minute — there's
+    // no reliable way to anchor a second "at start" trigger relative to it, so this case keeps
+    // its single existing trigger.
+    const body = params.minutesBefore > 0 ? `En ${params.minutesBefore} minutos: ${params.title}` : `Es hora de: ${params.title}`;
     const id = await Notifications.scheduleNotificationAsync({
       content: { title: 'RITMO', body },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: rule.interval * 86400, repeats: true },
     });
     saveMapping('ACTIVITY', params.activityId, id, `every${rule.interval}days`);
+    return;
+  }
+
+  const triggers: { offsetMinutes: number; body: string; tag: string }[] = [
+    ...(params.minutesBefore > 0
+      ? [{ offsetMinutes: params.minutesBefore, body: `En ${params.minutesBefore} minutos: ${params.title}`, tag: 'before' }]
+      : []),
+    { offsetMinutes: 0, body: `Es hora de: ${params.title}`, tag: 'start' },
+  ];
+
+  for (const { offsetMinutes, body, tag } of triggers) {
+    const { hour, minute } = wrapClockTime(startHour, startMinute, offsetMinutes);
+
+    if (rule.type === 'DAILY') {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: { title: 'RITMO', body },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute },
+      });
+      saveMapping('ACTIVITY', params.activityId, id, `daily@${hour}:${minute}:${tag}`);
+    } else if (rule.type === 'SPECIFIC_DAYS') {
+      for (const day of rule.days) {
+        const weekday = day + 1; // our days: 0=Sun..6=Sat; expo-notifications weekday: 1=Sun..7=Sat
+        const id = await Notifications.scheduleNotificationAsync({
+          content: { title: 'RITMO', body },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday, hour, minute },
+        });
+        saveMapping('ACTIVITY', params.activityId, id, `weekly@${weekday}:${tag}`);
+      }
+    } else if (rule.type === 'MONTHLY') {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: { title: 'RITMO', body },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.MONTHLY, day: rule.dayOfMonth, hour, minute },
+      });
+      saveMapping('ACTIVITY', params.activityId, id, `monthly@${rule.dayOfMonth}:${tag}`);
+    }
   }
 }
 
