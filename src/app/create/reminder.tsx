@@ -4,11 +4,13 @@ import { View } from 'react-native';
 
 import { DateTimeField } from '@/components/DateTimeField';
 import { FormScreen } from '@/components/FormScreen';
+import { RecurrencePicker } from '@/components/RecurrencePicker';
 import { TextField } from '@/components/TextField';
-import { createActivity, getActivity, updateActivity } from '@/db/repositories/activityRepository';
+import { createActivity, getActivity, updateActivityWithRecurrence } from '@/db/repositories/activityRepository';
 import { useAppStore } from '@/hooks/useAppStore';
-import { scheduleActivityReminder } from '@/notifications/notificationService';
+import { scheduleActivityReminder, scheduleRecurringActivityReminder } from '@/notifications/notificationService';
 import { useTheme } from '@/theme/ThemeProvider';
+import type { RecurrenceRule } from '@/types/entities';
 import { combineDateAndTime, toDateKey } from '@/utils/date';
 
 export default function CreateReminderScreen() {
@@ -24,6 +26,7 @@ export default function CreateReminderScreen() {
   const [time, setTime] = useState(() =>
     existingActivity ? combineDateAndTime(existingActivity.date, existingActivity.startTime) : new Date(),
   );
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule | null>(existingActivity?.recurrenceRule ?? null);
 
   const canSave = title.trim().length > 0;
 
@@ -42,21 +45,37 @@ export default function CreateReminderScreen() {
       endTime: null,
       duration: null,
       priority: null,
-      recurrenceRule: null,
+      recurrenceRule,
+      isRecurring: !!recurrenceRule,
       reminder: { enabled: true, minutesBefore: 0 },
       location: null,
     };
 
-    const activityId = existingActivity ? existingActivity.id : createActivity(payload).id;
-    if (existingActivity) updateActivity(activityId, payload);
+    let activityId: string;
+    if (existingActivity) {
+      activityId = existingActivity.id;
+      updateActivityWithRecurrence(activityId, payload);
+    } else {
+      activityId = createActivity(payload).id;
+    }
 
-    scheduleActivityReminder({
-      activityId,
-      title: payload.title,
-      date: activityDate,
-      startTime: activityStartTime,
-      minutesBefore: 0,
-    });
+    if (recurrenceRule) {
+      scheduleRecurringActivityReminder({
+        activityId,
+        title: payload.title,
+        startTime: activityStartTime,
+        minutesBefore: 0,
+        recurrenceRule,
+      });
+    } else {
+      scheduleActivityReminder({
+        activityId,
+        title: payload.title,
+        date: activityDate,
+        startTime: activityStartTime,
+        minutesBefore: 0,
+      });
+    }
     bumpDataVersion();
     router.back();
   };
@@ -74,6 +93,8 @@ export default function CreateReminderScreen() {
         <DateTimeField label="Fecha" mode="date" value={date} onChange={setDate} />
         <DateTimeField label="Hora" mode="time" value={time} onChange={setTime} />
       </View>
+
+      <RecurrencePicker value={recurrenceRule} onChange={setRecurrenceRule} />
     </FormScreen>
   );
 }
